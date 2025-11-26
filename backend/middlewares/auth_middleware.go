@@ -61,6 +61,21 @@ func AuthRequired() gin.HandlerFunc {
 		c.Next()
 	}
 }
+func RoleOnly(allowedRole string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		role := c.GetString("role")
+
+		if role != allowedRole {
+			c.JSON(http.StatusForbidden, gin.H{
+				"error": "Access restricted to role: " + allowedRole,
+			})
+			c.Abort()
+			return
+		}
+
+		c.Next()
+	}
+}
 func AdminOnly() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		role := c.GetString("role")
