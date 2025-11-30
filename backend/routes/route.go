@@ -45,6 +45,36 @@ func RegisterRoutes(r *gin.Engine) {
 	org.GET("/profile", controllers.GetOrganizationProfile)
 	org.PUT("/profile", controllers.UpdateOrganizationProfile)
 
+	org.POST("/events", controllers.CreateEvent)
+	org.GET("/events", controllers.ListMyEvents)
+	// Sesi
+	org.POST("/events/:eventID/sessions", controllers.CreateSession)
+	// Upload materi ke sesi
+	org.POST("/sessions/:sessionID/videos", controllers.UploadSessionVideo)
+	org.POST("/sessions/:sessionID/files", controllers.UploadSessionFile)
+	
+	org.GET("/sessions/:sessionID/media", controllers.GetSessionMedia)
+	// Publish / unpublish / schedule event
+	org.PUT("/events/:id/publish", controllers.PublishEvent)
+	org.PUT("/events/:id/unpublish", controllers.UnpublishEvent)
+	org.PUT("/events/:id/schedule", controllers.SchedulePublish)
+	// Publish / unpublish / schedule session
+	org.PUT("/sessions/:sessionID/publish", controllers.PublishSession)
+	org.PUT("/sessions/:sessionID/unpublish", controllers.UnpublishSession)
+	org.PUT("/sessions/:sessionID/schedule", controllers.ScheduleSessionPublish)
+
+	// PUBLIC: List all published event
+	api.GET("/events", controllers.ListPublicEvents)
+
+
+	// ===========================
+	// PUBLIC EVENT DETAIL
+	// ===========================
+	api.GET("/events/:eventID", controllers.GetEventDetail)
+	
+
+
+
 	// ========================
 	// ADMIN ROUTES
 	// ========================
