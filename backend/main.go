@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"BACKEND/config"
+	"BACKEND/middlewares"
 	"BACKEND/routes"
 )
 
@@ -55,6 +56,7 @@ func startAutoPublishJob() {
 
 func main() {
 	r := gin.Default()
+	
 
 	config.ConnectDB()
 	config.SetupCORS(r)
@@ -64,6 +66,8 @@ func main() {
 
 	// Register semua route
 	routes.RegisterRoutes(r)
+	// Middleware untuk blok akses langsung ke folder static
+	r.Use(middlewares.BlockStaticAccess())
 
 	// Start server
 	r.Run(":8080")

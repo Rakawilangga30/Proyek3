@@ -224,3 +224,131 @@ func GetSessionMedia(c *gin.Context) {
 		"files":  files,
 	})
 }
+
+//
+// ============================================================
+// 1. ORGANIZATION VIEW: Melihat media milik sesi sendiri
+// ============================================================
+//
+func GetOrganizationSessionMedia(c *gin.Context) {
+	userID := c.GetInt64("user_id")
+	sessionIDStr := c.Param("sessionID")
+
+	var sessionID int64
+	if _, err := fmt.Sscan(sessionIDStr, &sessionID); err != nil {
+		c.JSON(400, gin.H{"error": "Invalid session ID"})
+		return
+	}
+
+	// cek apakah sesi ini dimiliki organisasi user
+	if !checkSessionOwnedByUser(sessionID, userID) {
+		c.JSON(403, gin.H{"error": "You don't own this session"})
+		return
+	}
+
+	// Query video
+	var videos []models.SessionVideo
+	err := config.DB.Select(&videos, `
+		SELECT * FROM session_videos 
+		WHERE session_id = ?
+		ORDER BY order_index ASC
+	`, sessionID)
+
+	if err != nil {
+		c.JSON(500, gin.H{"error": "Failed to get videos"})
+		return
+	}
+
+	// Query files
+	var files []models.SessionFile
+	err = config.DB.Select(&files, `
+		SELECT * FROM session_files 
+		WHERE session_id = ?
+		ORDER BY order_index ASC
+	`, sessionID)
+
+	if err != nil {
+		c.JSON(500, gin.H{"error": "Failed to get files"})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"session_id": sessionID,
+		"videos":     videos,
+		"files":      files,
+	})
+}
+
+//
+// =======================================================================
+// 2. USER VIEW: Mengakses media sesi jika sudah membeli sesi tersebut
+// =======================================================================
+//
+func GetUserSessionMedia(c *gin.Context) {
+
+	userID := c.GetInt64("user_id")
+	sessionIDStr := c.Param("sessionID")
+
+	var sessionID int64
+	if _, err := fmt.Sscan(sessionIDStr, &sessionID); err != nil {
+		c.JSON(400, gin.H{"error": "Invalid session ID"})
+		return
+	}
+
+	// VALIDASI 1: user sudah membeli sesi?
+	var count int
+	err := config.DB.Get(&count, `
+		SELECT COUNT(*) FROM purchases 
+		WHERE user_id = ? AND session_id = ?
+	`, userID, sessionID)
+
+	if err != nil || count == 0 {
+		c.JSON(403, gin.H{"error": "You have not purchased this session"})
+		return
+	}
+
+	// VALIDASI 2: sesi sudah publish?
+	var status string
+	err = config.DB.Get(&status, `
+		SELECT publish_status FROM sessions WHERE id = ?
+	`, sessionID)
+
+	if err != nil || status != "PUBLISHED" {
+		c.JSON(403, gin.H{"error": "Session not accessible (not published)"})
+		return
+	}
+
+	// Ambil video
+	var videos []models.SessionVideo
+	err = config.DB.Select(&videos, `
+		SELECT id, session_id, title, video_url, order_index 
+		FROM session_videos 
+		WHERE session_id = ?
+		ORDER BY order_index ASC
+	`, sessionID)
+
+	if err != nil {
+		c.JSON(500, gin.H{"error": "Failed to load videos"})
+		return
+	}
+
+	// Ambil file materi
+	var files []models.SessionFile
+	err = config.DB.Select(&files, `
+		SELECT id, session_id, title, file_url, order_index 
+		FROM session_files 
+		WHERE session_id = ?
+		ORDER BY order_index ASC
+	`, sessionID)
+
+	if err != nil {
+		c.JSON(500, gin.H{"error": "Failed to load files"})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"session_id": sessionID,
+		"videos":     videos,
+		"files":      files,
+	})
+}

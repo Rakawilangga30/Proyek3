@@ -17,18 +17,48 @@ func RegisterRoutes(r *gin.Engine) {
 	api.POST("/login", controllers.Login)
 
 	// ========================
-	// USER PROFILE ROUTES
+	// USER ROUTES
 	// ========================
 	user := api.Group("/user")
 	user.Use(middlewares.AuthRequired())
 
+	// Profile
 	user.GET("/profile", controllers.GetMe)
 	user.PUT("/profile", controllers.UpdateMe)
 	user.POST("/profile/upload-image", controllers.UploadProfileImage)
 	user.PUT("/profile/change-password", controllers.ChangePassword)
 
+	// Pembelian sesi
+	user.POST("/buy/:sessionID", controllers.BuySession)
+	user.GET("/purchases", controllers.MyPurchases)
+
+	// LIST MEDIA (video & file metadata)
+	user.GET("/sessions/:sessionID/media",
+		middlewares.SessionAccessRequired(),
+		controllers.GetSessionMedia,
+	)
+
+	// ===============================
+	// SIGNED URL GENERATORS
+	// ===============================
+	user.GET("/sessions/signed-video/:filename", controllers.GetSignedVideoURL)
+	user.GET("/sessions/signed-file/:filename", controllers.GetSignedFileURL)
+
+	// ===============================
+	// STREAMING (VIDEO + FILE)
+	// ===============================
+	user.GET("/sessions/video/:filename",
+		middlewares.AuthRequired(),
+		controllers.StreamSessionVideo,
+	)
+
+	user.GET("/sessions/file/:filename",
+		middlewares.AuthRequired(),
+		controllers.StreamSessionFile,
+	)
+
 	// ========================
-	// APPLY ORGANIZATION (USER ONLY)
+	// APPLY ORGANIZATION
 	// ========================
 	api.POST("/organization/apply",
 		middlewares.AuthRequired(),
@@ -42,38 +72,39 @@ func RegisterRoutes(r *gin.Engine) {
 	org := api.Group("/organization")
 	org.Use(middlewares.AuthRequired(), middlewares.OrganizationOnly())
 
+	// profile
 	org.GET("/profile", controllers.GetOrganizationProfile)
 	org.PUT("/profile", controllers.UpdateOrganizationProfile)
 
+	// Event
 	org.POST("/events", controllers.CreateEvent)
 	org.GET("/events", controllers.ListMyEvents)
-	// Sesi
+
+	// Sessions
 	org.POST("/events/:eventID/sessions", controllers.CreateSession)
-	// Upload materi ke sesi
+
+	// Upload materi
 	org.POST("/sessions/:sessionID/videos", controllers.UploadSessionVideo)
 	org.POST("/sessions/:sessionID/files", controllers.UploadSessionFile)
-	
+
+	// Ambil media
 	org.GET("/sessions/:sessionID/media", controllers.GetSessionMedia)
-	// Publish / unpublish / schedule event
+
+	// EVENT publish
 	org.PUT("/events/:id/publish", controllers.PublishEvent)
 	org.PUT("/events/:id/unpublish", controllers.UnpublishEvent)
 	org.PUT("/events/:id/schedule", controllers.SchedulePublish)
-	// Publish / unpublish / schedule session
+
+	// SESSION publish
 	org.PUT("/sessions/:sessionID/publish", controllers.PublishSession)
 	org.PUT("/sessions/:sessionID/unpublish", controllers.UnpublishSession)
 	org.PUT("/sessions/:sessionID/schedule", controllers.ScheduleSessionPublish)
 
-	// PUBLIC: List all published event
+	// PUBLIC EVENT LISTING
 	api.GET("/events", controllers.ListPublicEvents)
 
-
-	// ===========================
 	// PUBLIC EVENT DETAIL
-	// ===========================
 	api.GET("/events/:eventID", controllers.GetEventDetail)
-	
-
-
 
 	// ========================
 	// ADMIN ROUTES
