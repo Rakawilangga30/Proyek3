@@ -100,3 +100,47 @@ func MyPurchases(c *gin.Context) {
 
 	c.JSON(200, gin.H{"purchases": purchases})
 }
+
+// =============================
+// CHECK SESSION PURCHASE STATUS
+// =============================
+func CheckSessionPurchase(c *gin.Context) {
+
+	userID := c.GetInt64("user_id")
+	sessionIDstr := c.Param("sessionID")
+
+	sessionID, err := strconv.ParseInt(sessionIDstr, 10, 64)
+	if err != nil {
+		c.JSON(400, gin.H{"error": "Invalid session ID"})
+		return
+	}
+
+	// 1. Cek sesi ada atau tidak (opsional, agar response rapi)
+	var sessionTitle string
+	err = config.DB.Get(&sessionTitle, "SELECT title FROM sessions WHERE id = ?", sessionID)
+	if err != nil {
+		c.JSON(404, gin.H{"error": "Session not found"})
+		return
+	}
+
+	// 2. Cek apakah user sudah membeli
+	var count int
+	err = config.DB.Get(&count, `
+		SELECT COUNT(*) FROM purchases 
+		WHERE user_id = ? AND session_id = ?
+	`, userID, sessionID)
+
+	if err != nil {
+		c.JSON(500, gin.H{"error": "Failed to check purchase status"})
+		return
+	}
+
+	// Jika count > 0 berarti sudah beli (true), jika 0 belum (false)
+	hasPurchased := count > 0
+
+	c.JSON(200, gin.H{
+		"session_id":    sessionID,
+		"session_title": sessionTitle,
+		"has_purchased": hasPurchased, // Ini data penting untuk frontend nanti
+	})
+}

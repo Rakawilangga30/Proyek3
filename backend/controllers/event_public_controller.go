@@ -9,7 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// =========================
+/// =========================
 // GET EVENT DETAIL (PUBLIC)
 // =========================
 func GetEventDetail(c *gin.Context) {
@@ -18,9 +18,10 @@ func GetEventDetail(c *gin.Context) {
 
 	// Ambil event
 	var event models.Event
+	// PERBAIKAN: Ganti 'is_published' menjadi 'publish_status'
 	err := config.DB.Get(&event, `
         SELECT id, organization_id, title, description, category, thumbnail_url, 
-               is_published, created_at 
+               publish_status, created_at 
         FROM events 
         WHERE id = ?
     `, eventID)
@@ -49,7 +50,6 @@ func GetEventDetail(c *gin.Context) {
 		"sessions": sessions,
 	})
 }
-
 type PublicEventResponse struct {
 	ID               int64   `db:"id" json:"id"`
 	Title            string  `db:"title" json:"title"`

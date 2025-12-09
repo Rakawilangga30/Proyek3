@@ -15,33 +15,33 @@ type Event struct {
     UpdatedAt      string   `db:"updated_at" json:"updated_at"`
 }
 
-
 type Session struct {
-	ID         int64     `db:"id"`
-	EventID    int64     `db:"event_id"`
-	Title      string    `db:"title"`
-	Description string   `db:"description"`
-	Price      int64     `db:"price"`
-	OrderIndex int       `db:"order_index"`
-	CreatedAt  time.Time `db:"created_at"`
+	ID          int64     `db:"id" json:"id"`
+	EventID     int64     `db:"event_id" json:"event_id"`
+	Title       string    `db:"title" json:"title"`
+	Description string    `db:"description" json:"description"`
+	Price       int64     `db:"price" json:"price"`
+	OrderIndex  int       `db:"order_index" json:"order_index"`
+	CreatedAt   time.Time `db:"created_at" json:"created_at"`
 }
 
+// PERBAIKAN PENTING DI SINI 👇
 type SessionVideo struct {
-	ID         int64     `db:"id"`
-	SessionID  int64     `db:"session_id"`
-	Title      string    `db:"title"`
-	VideoURL   string    `db:"video_url"`
-	SizeBytes  int64     `db:"size_bytes"`
-	OrderIndex int       `db:"order_index"`
-	CreatedAt  time.Time `db:"created_at"`
+	ID         int64     `db:"id" json:"id"`
+	SessionID  int64     `db:"session_id" json:"session_id"`
+	Title      string    `db:"title" json:"title"`
+	VideoURL   string    `db:"video_url" json:"video_url"` // <--- Agar jadi huruf kecil
+	SizeBytes  int64     `db:"size_bytes" json:"size_bytes"`
+	OrderIndex int       `db:"order_index" json:"order_index"`
+	CreatedAt  time.Time `db:"created_at" json:"created_at"`
 }
 
 type SessionFile struct {
-	ID         int64     `db:"id"`
-	SessionID  int64     `db:"session_id"`
-	Title      string    `db:"title"`
-	FileURL    string    `db:"file_url"`
-	SizeBytes  int64     `db:"size_bytes"`
-	OrderIndex int       `db:"order_index"`
-	CreatedAt  time.Time `db:"created_at"`
+	ID         int64     `db:"id" json:"id"`
+	SessionID  int64     `db:"session_id" json:"session_id"`
+	Title      string    `db:"title" json:"title"`
+	FileURL    string    `db:"file_url" json:"file_url"`   // <--- Agar jadi huruf kecil
+	SizeBytes  int64     `db:"size_bytes" json:"size_bytes"`
+	OrderIndex int       `db:"order_index" json:"order_index"`
+	CreatedAt  time.Time `db:"created_at" json:"created_at"`
 }

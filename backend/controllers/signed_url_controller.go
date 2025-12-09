@@ -2,55 +2,32 @@ package controllers
 
 import (
 	"fmt"
-	"time"
-
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
+	"BACKEND/helpers" // Pastikan import ini ada
 )
 
-//
-// ===============================================================
-// GENERATE SIGNED URL — VIDEO
-// ===============================================================
-//
-
 func GetSignedVideoURL(c *gin.Context) {
-
+	userID := c.GetInt64("user_id") // Ambil User ID
 	filename := c.Param("filename")
 
-	// generate token unik
-	token := uuid.NewString()
+	// GUNAKAN HELPER INI, JANGAN UUID
+	token, exp := helpers.GenerateSignedToken(userID, filename)
 
-	// expired 5 menit
-	exp := time.Now().Add(5 * time.Minute).Unix()
+	// Masukkan uid ke dalam URL agar controller stream tau siapa yang nonton
+	signedURL := fmt.Sprintf("/api/user/sessions/video/%s?token=%s&exp=%d&uid=%d", 
+		filename, token, exp, userID)
 
-	signedURL := "/api/user/sessions/video/" + filename +
-		"?token=" + token +
-		"&exp=" + fmt.Sprint(exp)
-
-	c.JSON(200, gin.H{
-		"url": signedURL,
-	})
+	c.JSON(200, gin.H{"url": signedURL})
 }
 
-//
-// ===============================================================
-// GENERATE SIGNED URL — FILE
-// ===============================================================
-//
-
 func GetSignedFileURL(c *gin.Context) {
-
+	userID := c.GetInt64("user_id")
 	filename := c.Param("filename")
 
-	token := uuid.NewString()
-	exp := time.Now().Add(5 * time.Minute).Unix()
+	token, exp := helpers.GenerateSignedToken(userID, filename)
 
-	signedURL := "/api/user/sessions/file/" + filename +
-		"?token=" + token +
-		"&exp=" + fmt.Sprint(exp)
+	signedURL := fmt.Sprintf("/api/user/sessions/file/%s?token=%s&exp=%d&uid=%d", 
+		filename, token, exp, userID)
 
-	c.JSON(200, gin.H{
-		"url": signedURL,
-	})
+	c.JSON(200, gin.H{"url": signedURL})
 }

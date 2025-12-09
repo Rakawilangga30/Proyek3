@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -14,69 +15,86 @@ import (
 )
 
 // =============================================================
-// STREAM VIDEO (akses hanya jika sudah beli)
+// STREAM VIDEO (Debug Version)
 // =============================================================
 func StreamSessionVideo(c *gin.Context) {
-
 	filename := c.Param("filename")
 	token := c.Query("token")
 	expStr := c.Query("exp")
+	uidStr := c.Query("uid")
 
+	fmt.Println("\n--- DEBUG STREAM VIDEO ---")
+	fmt.Println("Request Filename:", filename)
+	fmt.Println("User ID:", uidStr)
+
+	// 1. Cek Expired
 	exp, _ := strconv.ParseInt(expStr, 10, 64)
 	if time.Now().Unix() > exp {
+		fmt.Println("❌ Error: URL Expired")
 		c.JSON(403, gin.H{"error": "URL expired"})
 		return
 	}
 
-	userID := c.GetInt64("user_id")
+	// 2. Validasi Token
+	userID, _ := strconv.ParseInt(uidStr, 10, 64)
 	if !helpers.ValidateSignedToken(userID, filename, exp, token) {
-		c.JSON(403, gin.H{"error": "Invalid token"})
+		fmt.Println("❌ Error: Invalid Token Signature")
+		c.JSON(403, gin.H{"error": "Invalid token signature"})
 		return
 	}
 
-	// cek kepemilikan sesi
+	// 3. Cek Database (Pakai LIKE agar lebih aman)
 	var sessionID int64
-	config.DB.Get(&sessionID,
-		"SELECT session_id FROM session_videos WHERE video_url = ?",
-		"uploads/videos/"+filename,
+	// Mencari video yang URL-nya MENGANDUNG nama file ini
+	err := config.DB.Get(&sessionID, 
+		"SELECT session_id FROM session_videos WHERE video_url LIKE ?", 
+		"%"+filename,
 	)
+	if err != nil {
+		fmt.Println("❌ Error: Metadata video tidak ditemukan di DB untuk file:", filename)
+		c.JSON(404, gin.H{"error": "Video metadata not found in database"})
+		return
+	}
 
+	// 4. Cek Pembelian
 	var count int
 	config.DB.Get(&count,
 		"SELECT COUNT(*) FROM purchases WHERE user_id=? AND session_id=?",
 		userID, sessionID,
 	)
-
 	if count == 0 {
-		c.JSON(403, gin.H{"error": "Unauthorized access"})
+		fmt.Println("❌ Error: User belum beli sesi ini. SessionID:", sessionID)
+		c.JSON(403, gin.H{"error": "Unauthorized access (not purchased)"})
 		return
 	}
 
+	// 5. Cek Fisik File
 	fullPath := filepath.Join("uploads/videos", filename)
-
-	file, err := os.Open(fullPath)
-	if err != nil {
-		c.JSON(404, gin.H{"error": "Video not found"})
+	fmt.Println("Mencari file fisik di:", fullPath)
+	
+	if _, err := os.Stat(fullPath); os.IsNotExist(err) {
+		fmt.Println("❌ Error: File fisik tidak ditemukan di server!")
+		// Coba cari di folder files barangkali salah upload
+		c.JSON(404, gin.H{"error": "Video file not found on server"})
 		return
 	}
 
-	stat, _ := file.Stat()
-
-	c.Header("Content-Type", "video/mp4")
-	c.Header("Accept-Ranges", "bytes")
-	c.Header("Content-Length", strconv.FormatInt(stat.Size(), 10))
-
-	http.ServeContent(c.Writer, c.Request, filename, stat.ModTime(), file)
+	// 6. Serve File
+	fmt.Println("✅ Sukses! Memulai streaming...")
+	http.ServeFile(c.Writer, c.Request, fullPath)
 }
 
 // =============================================================
-// STREAM FILE — VIEW ONLY (PDF/PPT)
+// STREAM FILE (Debug Version)
 // =============================================================
 func StreamSessionFile(c *gin.Context) {
-
 	filename := c.Param("filename")
 	token := c.Query("token")
 	expStr := c.Query("exp")
+	uidStr := c.Query("uid")
+
+	fmt.Println("\n--- DEBUG STREAM FILE ---")
+	fmt.Println("Request Filename:", filename)
 
 	exp, _ := strconv.ParseInt(expStr, 10, 64)
 	if time.Now().Unix() > exp {
@@ -84,42 +102,40 @@ func StreamSessionFile(c *gin.Context) {
 		return
 	}
 
-	userID := c.GetInt64("user_id")
+	userID, _ := strconv.ParseInt(uidStr, 10, 64)
 	if !helpers.ValidateSignedToken(userID, filename, exp, token) {
 		c.JSON(403, gin.H{"error": "Invalid token"})
 		return
 	}
 
 	var sessionID int64
-	config.DB.Get(&sessionID,
-		"SELECT session_id FROM session_files WHERE file_url = ?",
-		"uploads/files/"+filename,
+	err := config.DB.Get(&sessionID, 
+		"SELECT session_id FROM session_files WHERE file_url LIKE ?", 
+		"%"+filename,
 	)
+	if err != nil {
+		fmt.Println("❌ Error: Metadata file tidak ditemukan di DB")
+		c.JSON(404, gin.H{"error": "File metadata not found"})
+		return
+	}
 
 	var count int
 	config.DB.Get(&count,
 		"SELECT COUNT(*) FROM purchases WHERE user_id=? AND session_id=?",
 		userID, sessionID,
 	)
-
 	if count == 0 {
 		c.JSON(403, gin.H{"error": "Unauthorized"})
 		return
 	}
 
 	fullPath := filepath.Join("uploads/files", filename)
-
-	file, err := os.Open(fullPath)
-	if err != nil {
+	if _, err := os.Stat(fullPath); os.IsNotExist(err) {
+		fmt.Println("❌ Error: File fisik tidak ditemukan:", fullPath)
 		c.JSON(404, gin.H{"error": "File not found"})
 		return
 	}
 
-	stat, _ := file.Stat()
-
-	c.Header("Content-Disposition", "inline")
-	c.Header("Content-Type", "application/pdf")
-	c.Header("Content-Length", strconv.FormatInt(stat.Size(), 10))
-
-	http.ServeContent(c.Writer, c.Request, filename, stat.ModTime(), file)
+	fmt.Println("✅ Sukses! Membuka file...")
+	http.ServeFile(c.Writer, c.Request, fullPath)
 }
