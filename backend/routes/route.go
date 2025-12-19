@@ -9,121 +9,120 @@ import (
 
 func RegisterRoutes(r *gin.Engine) {
 
+	// Group utama: /api
 	api := r.Group("/api")
 
-	// ========================
-	// AUTH ROUTES
-	// ========================
-	api.POST("/register", controllers.Register)
-	api.POST("/login", controllers.Login)
+	// ==========================================
+	// 1. PUBLIC ROUTES (Tanpa Login)
+	// ==========================================
+	{
+		// Authentication
+		api.POST("/register", controllers.Register)
+		api.POST("/login", controllers.Login)
+
+		// Public Event Listing (Home & Upcoming)
+		api.GET("/events", controllers.ListPublicEvents)
+
+		// Public Event Detail (Preview silabus & info event)
+		api.GET("/events/:eventID", controllers.GetEventDetail)
+
+		// Streaming (Bypass Auth Header)
+		// Token dikirim via query param (?token=...)
+		api.GET("/user/sessions/video/:filename", controllers.StreamSessionVideo)
+		api.GET("/user/sessions/file/:filename", controllers.StreamSessionFile)
+	}
 
 	// ==========================================
-	// STREAMING (VIDEO + FILE) - BYPASS AUTH HEADER
+	// 2. USER ROUTES (Login: USER, ORGANIZER, ADMIN)
 	// ==========================================
-	// PENTING: Kita pakai 'api.GET' bukan 'user.GET'
-	// supaya tidak kena middleware AuthRequired.
-	// Keamanan sudah ditangani oleh token di URL.
-	api.GET("/user/sessions/video/:filename", controllers.StreamSessionVideo)
-	api.GET("/user/sessions/file/:filename", controllers.StreamSessionFile)
-
-	// ===============================
-	// SIGNED URL GENERATORS
-	// ===============================
-	// Ini tetap butuh login (user.GET) karena user minta linknya lewat aplikasi
-
-	// ========================
-	// USER ROUTES (BUTUH LOGIN)
-	// ========================
 	user := api.Group("/user")
-	user.Use(middlewares.AuthRequired())
+	user.Use(middlewares.AuthRequired()) // Semua di bawah ini butuh Login
+	{
+		// Profile Management
+		user.GET("/profile", controllers.GetMe)
+		user.PUT("/profile", controllers.UpdateMe)
+		user.POST("/profile/upload-image", controllers.UploadProfileImage)
+		user.PUT("/profile/change-password", controllers.ChangePassword)
 
-	// Profile
-	user.GET("/profile", controllers.GetMe)
-	user.PUT("/profile", controllers.UpdateMe)
-	user.POST("/profile/upload-image", controllers.UploadProfileImage)
-	user.PUT("/profile/change-password", controllers.ChangePassword)
+		// Transaction / Pembelian
+		user.POST("/buy/:sessionID", controllers.BuySession)
+		user.GET("/purchases", controllers.MyPurchases)
+		user.GET("/sessions/:sessionID/check-purchase", controllers.CheckSessionPurchase)
 
-	// Pembelian sesi
-	user.POST("/buy/:sessionID", controllers.BuySession)
-	user.GET("/purchases", controllers.MyPurchases)
+		// Akses Materi (Dengan Pengecekan Pembelian)
+		user.GET("/sessions/:sessionID/media",
+			middlewares.SessionAccessRequired(), // Middleware khusus cek beli
+			controllers.GetUserSessionMedia,
+		)
 
-	// Purchase Check
-	user.GET("/sessions/:sessionID/check-purchase", controllers.CheckSessionPurchase)
+		// Generator Signed URL (Untuk streaming aman)
+		user.GET("/sessions/signed-video/:filename", controllers.GetSignedVideoURL)
+		user.GET("/sessions/signed-file/:filename", controllers.GetSignedFileURL)
+	}
 
-	// LIST MEDIA (video & file metadata)
-	user.GET("/sessions/:sessionID/media",
-		middlewares.SessionAccessRequired(),
-		controllers.GetUserSessionMedia,
-	)
-
-	// Generator URL (Ini butuh login karena generate link rahasia)
-	user.GET("/sessions/signed-video/:filename", controllers.GetSignedVideoURL)
-	user.GET("/sessions/signed-file/:filename", controllers.GetSignedFileURL)
-
-	// ========================
-	// APPLY ORGANIZATION
-	// ========================
+	// ==========================================
+	// 3. REGISTRATION ROUTE (SPECIAL CASE)
+	// ==========================================
+	// Route ini ada di path /organization tapi diakses oleh USER biasa.
+	// Kita taruh di luar grup 'org' agar tidak terblokir middleware OrganizationOnly.
 	api.POST("/organization/apply",
 		middlewares.AuthRequired(),
-		middlewares.RoleOnly("USER"),
+		middlewares.RoleOnly("USER"), // Hanya user biasa yang boleh daftar jadi organizer
 		controllers.ApplyOrganization,
 	)
 
-	// ========================
-	// ORGANIZATION ROUTES
-	// ========================
+	// ==========================================
+	// 4. ORGANIZATION ROUTES (Login + Role: ORGANIZER)
+	// ==========================================
 	org := api.Group("/organization")
 	org.Use(middlewares.AuthRequired(), middlewares.OrganizationOnly())
+	{
+		// Org Profile
+		org.GET("/profile", controllers.GetOrganizationProfile)
+		org.PUT("/profile", controllers.UpdateOrganizationProfile)
 
-	// profile
-	org.GET("/profile", controllers.GetOrganizationProfile)
-	org.PUT("/profile", controllers.UpdateOrganizationProfile)
+		// Event Management
+		org.POST("/events", controllers.CreateEvent)
+		org.GET("/events", controllers.ListMyEvents)
+		org.GET("/events/:eventID", controllers.GetMyEventDetailForManage) // Detail khusus owner
 
-	// Event Management
-	org.POST("/events", controllers.CreateEvent)
-	org.GET("/events", controllers.ListMyEvents)
+		// Event Publishing
+		org.PUT("/events/:id/publish", controllers.PublishEvent)
+		org.PUT("/events/:id/unpublish", controllers.UnpublishEvent)
+		org.PUT("/events/:id/schedule", controllers.SchedulePublish)
 
-	org.GET("/events/:eventID", controllers.GetMyEventDetail)
+		// Session Management
+		org.POST("/events/:eventID/sessions", controllers.CreateSession)
 
-	// Sessions
-	org.POST("/events/:eventID/sessions", controllers.CreateSession)
+		// Session Publishing
+		org.PUT("/sessions/:sessionID/publish", controllers.PublishSession)
+		org.PUT("/sessions/:sessionID/unpublish", controllers.UnpublishSession)
+		org.PUT("/sessions/:sessionID/schedule", controllers.ScheduleSessionPublish)
 
-	// Upload materi
-	org.POST("/sessions/:sessionID/videos", controllers.UploadSessionVideo)
-	org.POST("/sessions/:sessionID/files", controllers.UploadSessionFile)
+		// Upload Materi
+		org.POST("/sessions/:sessionID/videos", controllers.UploadSessionVideo)
+		org.POST("/sessions/:sessionID/files", controllers.UploadSessionFile)
 
-	// Ambil media
-	org.GET("/sessions/:sessionID/media", controllers.GetSessionMedia)
+		// Preview Materi (Tanpa cek pembelian, karena dia pemilik)
+		org.GET("/sessions/:sessionID/media", controllers.GetSessionMedia)
+	}
 
-	// Event Publish
-    org.PUT("/events/:id/publish", controllers.PublishEvent)
-    org.PUT("/events/:id/unpublish", controllers.UnpublishEvent)
-    org.PUT("/events/:id/schedule", controllers.SchedulePublish) // <--- PASTIKAN ADA
-
-    // Session Publish
-    org.PUT("/sessions/:sessionID/publish", controllers.PublishSession)
-    org.PUT("/sessions/:sessionID/unpublish", controllers.UnpublishSession)
-    org.PUT("/sessions/:sessionID/schedule", controllers.ScheduleSessionPublish)
-
-	// PUBLIC EVENT LISTING
-	api.GET("/events", controllers.ListPublicEvents)
-
-	// PUBLIC EVENT DETAIL
-	api.GET("/events/:eventID", controllers.GetEventDetail)
-
-	// ========================
-	// ADMIN ROUTES
-	// ========================
+	// ==========================================
+	// 5. ADMIN ROUTES (Login + Role: ADMIN)
+	// ==========================================
 	admin := api.Group("/admin")
 	admin.Use(middlewares.AuthRequired(), middlewares.AdminOnly())
+	{
+		// User Management
+		admin.GET("/users", controllers.GetAllUsers)
+		admin.GET("/users/:id", controllers.GetUserByID)
+		admin.POST("/users", controllers.CreateUserByAdmin)
+		admin.PUT("/users/:id", controllers.UpdateUserByAdmin)
+		admin.DELETE("/users/:id", controllers.DeleteUser)
 
-	admin.GET("/users", controllers.GetAllUsers)
-	admin.GET("/users/:id", controllers.GetUserByID)
-	admin.PUT("/users/:id", controllers.UpdateUserByAdmin)
-	admin.DELETE("/users/:id", controllers.DeleteUser)
-	admin.POST("/users", controllers.CreateUserByAdmin)
-
-	admin.GET("/organization/applications", controllers.GetAllOrganizationApplications)
-	admin.GET("/organization/applications/:id", controllers.GetOrganizationApplicationByID)
-	admin.POST("/organization/applications/:id/review", controllers.ReviewOrganizationApplication)
+		// Organization Approval
+		admin.GET("/organization/applications", controllers.GetAllOrganizationApplications)
+		admin.GET("/organization/applications/:id", controllers.GetOrganizationApplicationByID)
+		admin.POST("/organization/applications/:id/review", controllers.ReviewOrganizationApplication)
+	}
 }

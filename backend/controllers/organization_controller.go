@@ -8,7 +8,6 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"BACKEND/config"
-	"BACKEND/models"
 )
 
 // =============================
@@ -136,49 +135,3 @@ func CreateSession(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Session created!", "session_id": sessionID})
 }
 
-// =======================================
-// ORGANIZATION: GET MY EVENT DETAIL
-// =======================================
-func GetMyEventDetail(c *gin.Context) {
-	eventID := c.Param("eventID")
-	userID := c.GetInt64("user_id")
-
-	// 1. Ambil Org ID user
-	orgID, err := getOrganizationIDByUser(userID)
-	if err != nil {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Invalid organization"})
-		return
-	}
-
-	// 2. Ambil Event (DRAFT maupun PUBLISHED, asalkan milik org ini)
-	var event models.Event
-	err = config.DB.Get(&event, `
-		SELECT id, organization_id, title, description, category, thumbnail_url, 
-		       publish_status, publish_at, created_at, updated_at 
-		FROM events 
-		WHERE id = ? AND organization_id = ?
-	`, eventID, orgID)
-
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Event not found or access denied"})
-		return
-	}
-
-	// 3. Ambil Sesi
-	var sessions []models.Session
-	err = config.DB.Select(&sessions, `
-		SELECT id, event_id, title, description, price, order_index, created_at 
-		FROM sessions 
-		WHERE event_id = ? 
-		ORDER BY order_index ASC
-	`, eventID)
-
-	if err != nil {
-		sessions = []models.Session{}
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"event":    event,
-		"sessions": sessions,
-	})
-}

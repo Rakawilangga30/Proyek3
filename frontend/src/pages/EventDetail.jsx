@@ -77,11 +77,19 @@ export default function EventDetail() {
     const handleOpenMaterial = async (sessionID) => {
         try {
             const res = await api.get(`/user/sessions/${sessionID}/media`);
-            setSelectedSessionMedia(res.data);
-            setActiveVideoUrl(null); 
-            setExpandedMediaId(null); 
+            console.debug("GetUserSessionMedia response:", res.data);
+            // Pastikan struktur data aman (fallback ke array kosong jika server mengirimkan null)
+            const safeData = {
+                session_id: res.data?.session_id ?? sessionID,
+                videos: Array.isArray(res.data?.videos) ? res.data.videos : [],
+                files: Array.isArray(res.data?.files) ? res.data.files : [],
+            };
+            setSelectedSessionMedia(safeData);
+            setActiveVideoUrl(null);
+            setExpandedMediaId(null);
             window.scrollTo({ top: 0, behavior: 'smooth' });
         } catch (error) {
+            console.error("Gagal membuka materi:", error);
             alert("Gagal membuka materi: " + (error.response?.data?.error || "Error"));
         }
     };
@@ -209,16 +217,16 @@ export default function EventDetail() {
 
                             {/* LIST VIDEO */}
                             <h3 style={{ marginTop: 0, color: "#2b6cb0" }}>📺 Video Pembelajaran</h3>
-                            {selectedSessionMedia.videos.length === 0 ? <p style={{color:"#888"}}>Tidak ada video.</p> : (
+                            {(selectedSessionMedia?.videos?.length || 0) === 0 ? <p style={{color:"#888"}}>Tidak ada video.</p> : (
                                 <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "30px" }}>
-                                    {selectedSessionMedia.videos.map((vid) => (
+                                    {selectedSessionMedia?.videos?.map((vid) => (
                                         <div key={vid.id} style={{border:"1px solid #ddd", borderRadius:"5px", background:"white"}}>
                                             <div onClick={() => toggleMedia(vid.id)} style={{padding:"10px", cursor:"pointer", fontWeight:"bold", background:"#f7fafc"}}>
-                                                🎥 {vid.title} {expandedMediaId === vid.id ? "🔼" : "🔽"}
+                                                🎥 {vid.title || vid.video_url || 'Untitled video'} {expandedMediaId === vid.id ? "🔼" : "🔽"}
                                             </div>
                                             {expandedMediaId === vid.id && (
                                                 <div style={{padding:"10px", borderTop:"1px solid #eee"}}>
-                                                    <p>{vid.description}</p>
+                                                    <p>{vid.description || 'Tidak ada deskripsi.'}</p>
                                                     <button onClick={() => handlePlayVideo(vid.video_url)} style={{background:"#e53e3e", color:"white", border:"none", padding:"5px 10px", borderRadius:"3px", cursor:"pointer"}}>▶️ Putar</button>
                                                 </div>
                                             )}
@@ -229,16 +237,17 @@ export default function EventDetail() {
 
                             {/* LIST FILE */}
                             <h3 style={{ color: "#c05621" }}>📄 Modul Dokumen</h3>
-                            {selectedSessionMedia.files.length === 0 ? <p style={{color:"#888"}}>Tidak ada file.</p> : (
+                            {(selectedSessionMedia?.files?.length || 0) === 0 ? <p style={{color:"#888"}}>Tidak ada file.</p> : (
                                 <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                                    {selectedSessionMedia.files.map((f) => (
+                                    {selectedSessionMedia?.files?.map((f) => (
                                         <div key={f.id} style={{border:"1px solid #ddd", borderRadius:"5px", background:"white"}}>
-                                            <div onClick={() => toggleMedia(`file-${f.id}`)} style={{padding:"10px", cursor:"pointer", fontWeight:"bold", background:"#fffaf0"}}>
-                                                📑 {f.title} {expandedMediaId === `file-${f.id}` ? "🔼" : "🔽"}
+                                            <div onClick={() => toggleMedia("file-" + f.id)} style={{padding:"10px", cursor:"pointer", fontWeight:"bold", background: "#fffaf0", display: "flex", justifyContent: "space-between", alignItems: "center"}}>
+                                                <span>📑 {f.title || f.file_url || 'Untitled file'}</span>
+                                                <span>{ (expandedMediaId === ("file-" + f.id)) ? "🔼" : "🔽" }</span>
                                             </div>
-                                            {expandedMediaId === `file-${f.id}` && (
+                                            { (expandedMediaId === ("file-" + f.id)) && (
                                                 <div style={{padding:"10px", borderTop:"1px solid #eee"}}>
-                                                    <p>{f.description}</p>
+                                                    <p>{f.description || 'Tidak ada deskripsi.'}</p>
                                                     <button onClick={() => handleOpenFile(f.file_url)} style={{background:"#dd6b20", color:"white", border:"none", padding:"5px 10px", borderRadius:"3px", cursor:"pointer"}}>📄 Buka</button>
                                                 </div>
                                             )}

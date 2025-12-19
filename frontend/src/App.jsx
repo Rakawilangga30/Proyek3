@@ -1,33 +1,42 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 
-// Import Halaman
-import Dashboard from "./pages/Dashboard";         // Halaman Public Home
-import EventDetail from "./pages/EventDetail";     // Halaman Public Detail
-import MyOrganization from "./pages/org/MyOrganization"; // <--- IMPORT BARU (List Event)
-import ManageEvent from "./pages/org/ManageEvent"; // Halaman Manage (Upload/Publish)
-// Import Login/Register nanti disini...
+// IMPORT KOMPONEN UI
+import Navbar from "./components/Navbar";
+
+// IMPORT HALAMAN UTAMA
+import Dashboard from "./pages/Dashboard";         
+import EventDetail from "./pages/EventDetail";     
+import MyOrganization from "./pages/org/MyOrganization"; 
+import ManageEvent from "./pages/org/ManageEvent"; 
+
+// IMPORT HALAMAN AUTH (YANG BARU DIBUAT)
+import Login from "./pages/Login";       // <--- INI PENTING
+import Register from "./pages/Register"; // <--- INI PENTING
 
 function App() {
   return (
     <Router>
-      <Routes>
-        {/* 1. Rute Dashboard Public */}
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/dashboard" element={<Dashboard />} />
+      <Navbar /> 
+      
+      <div style={{ marginTop: "20px" }}> 
+        <Routes>
+          {/* Public Routes */}
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/event/:id" element={<EventDetail />} />
 
-        {/* 2. Rute Detail Event Public */}
-        <Route path="/event/:id" element={<EventDetail />} />
+          {/* Auth Routes (Login & Register) */}
+          <Route path="/login" element={<Login />} />       {/* <--- Route Login */}
+          <Route path="/register" element={<Register />} /> {/* <--- Route Register */}
 
-        {/* 3. Rute Organization / Creator */}
-        {/* Halaman List Event milik Creator */}
-        <Route path="/org" element={<MyOrganization />} /> 
-        
-        {/* Halaman Kelola Event (Upload Video, Publish, dll) */}
-        <Route path="/org/event/:eventID/manage" element={<ManageEvent />} />
+          {/* Organization Routes */}
+          <Route path="/org" element={<MyOrganization />} /> 
+          <Route path="/org/event/:eventID/manage" element={<ManageEvent />} />
 
-        {/* 4. Fallback 404 */}
-        <Route path="*" element={<div style={{padding:40, textAlign:"center"}}><h2>404 Page Not Found</h2><p>Halaman tidak ditemukan.</p></div>} />
-      </Routes>
+          {/* Fallback */}
+          <Route path="*" element={<div style={{padding:40, textAlign:"center"}}><h2>404 Not Found</h2></div>} />
+        </Routes>
+      </div>
     </Router>
   );
 }

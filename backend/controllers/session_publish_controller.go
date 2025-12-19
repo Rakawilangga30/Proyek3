@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -15,7 +16,6 @@ func checkSessionOwnedByUserID(sessionID int64, userID int64) bool {
 	return count > 0
 }
 
-// 1. PUBLISH SESSION
 func PublishSession(c *gin.Context) {
 	userID := c.GetInt64("user_id")
 	sessionID, _ := strconv.ParseInt(c.Param("sessionID"), 10, 64)
@@ -33,7 +33,6 @@ func PublishSession(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Session published!", "status": "PUBLISHED"})
 }
 
-// 2. UNPUBLISH SESSION
 func UnpublishSession(c *gin.Context) {
 	userID := c.GetInt64("user_id")
 	sessionID, _ := strconv.ParseInt(c.Param("sessionID"), 10, 64)
@@ -51,7 +50,6 @@ func UnpublishSession(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Session drafted!", "status": "DRAFT"})
 }
 
-// 3. SCHEDULE SESSION (FIX Parsing Tanggal)
 func ScheduleSessionPublish(c *gin.Context) {
 	userID := c.GetInt64("user_id")
 	sessionID, _ := strconv.ParseInt(c.Param("sessionID"), 10, 64)
@@ -69,15 +67,21 @@ func ScheduleSessionPublish(c *gin.Context) {
 		return
 	}
 
-	// Parsing ISO Date String ke Time Object
-	parsedTime, err := time.Parse(time.RFC3339, req.PublishAt)
+	// Parsing Tanggal Fleksibel
+	parsedTime, err := time.Parse("2006-01-02T15:04", req.PublishAt)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid date format. Use ISO8601"})
-		return
+		parsedTime, err = time.Parse(time.RFC3339, req.PublishAt)
+		if err != nil {
+			fmt.Println("Date Parse Error:", err)
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid date format"})
+			return
+		}
 	}
+	sqlTimeStr := parsedTime.Format("2006-01-02 15:04:05")
 
-	_, err = config.DB.Exec(`UPDATE sessions SET publish_status = 'SCHEDULED', publish_at = ? WHERE id = ?`, parsedTime, sessionID)
+	_, err = config.DB.Exec(`UPDATE sessions SET publish_status = 'SCHEDULED', publish_at = ? WHERE id = ?`, sqlTimeStr, sessionID)
 	if err != nil {
+		fmt.Println("DB Error:", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to schedule session"})
 		return
 	}

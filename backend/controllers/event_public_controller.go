@@ -1,19 +1,18 @@
 package controllers
 
 import (
+	"fmt"
 	"net/http"
-
 	"BACKEND/config"
 	"BACKEND/models"
-
 	"github.com/gin-gonic/gin"
 )
 
-// Struct khusus untuk respon list agar ringan
+// Struct respon ringkas
 type PublicEventResponse struct {
 	ID               int64   `db:"id" json:"id"`
 	Title            string  `db:"title" json:"title"`
-	Description      string  `db:"description" json:"description"` // Tambahkan deskripsi untuk preview
+	Description      string  `db:"description" json:"description"`
 	Category         string  `db:"category" json:"category"`
 	ThumbnailURL     *string `db:"thumbnail_url" json:"thumbnail_url"`
 	OrganizationName string  `db:"organization_name" json:"organization_name"`
@@ -23,20 +22,13 @@ type PublicEventResponse struct {
 }
 
 // =========================================================
-// GET ALL PUBLIC EVENTS (Published & Scheduled separated)
+// GET ALL PUBLIC EVENTS
 // =========================================================
 func ListPublicEvents(c *gin.Context) {
-
-	category := c.Query("category") // Filter opsional
-
-	// Base Query: Join Event dengan Organization & Hitung Sesi/Harga
+	// Base Query
 	baseQuery := `
 		SELECT 
-			e.id,
-			e.title,
-			e.description,
-			e.category,
-			e.thumbnail_url,
+			e.id, e.title, e.description, e.category, e.thumbnail_url,
 			o.name AS organization_name,
 			(SELECT COUNT(*) FROM sessions s WHERE s.event_id = e.id) AS session_count,
 			(SELECT COALESCE(MIN(price), 0) FROM sessions s WHERE s.event_id = e.id) AS min_price,
@@ -45,42 +37,16 @@ func ListPublicEvents(c *gin.Context) {
 		JOIN organizations o ON o.id = e.organization_id
 	`
 
-	// 1. Ambil Event PUBLISHED (Sedang Tayang)
-	// ----------------------------------------
-	queryPub := baseQuery + " WHERE e.publish_status = 'PUBLISHED'"
-	paramsPub := []interface{}{}
-
-	if category != "" {
-		queryPub += " AND e.category = ?"
-		paramsPub = append(paramsPub, category)
-	}
-	queryPub += " ORDER BY e.created_at DESC"
-
+	// 1. PUBLISHED
 	var publishedEvents []PublicEventResponse
-	err := config.DB.Select(&publishedEvents, queryPub, paramsPub...)
-	if err != nil {
-		publishedEvents = []PublicEventResponse{} // Return array kosong jika error/tidak ada data
-	}
+	config.DB.Select(&publishedEvents, baseQuery+" WHERE e.publish_status = 'PUBLISHED' ORDER BY e.created_at DESC")
+	if publishedEvents == nil { publishedEvents = []PublicEventResponse{} }
 
-	// 2. Ambil Event SCHEDULED (Coming Soon / Upcoming)
-	// -------------------------------------------------
-	queryUp := baseQuery + " WHERE e.publish_status = 'SCHEDULED'"
-	paramsUp := []interface{}{}
-
-	if category != "" {
-		queryUp += " AND e.category = ?"
-		paramsUp = append(paramsUp, category)
-	}
-	// Urutkan berdasarkan tanggal tayang (yang paling dekat tayang duluan)
-	queryUp += " ORDER BY e.publish_at ASC"
-
+	// 2. UPCOMING (SCHEDULED)
 	var upcomingEvents []PublicEventResponse
-	err = config.DB.Select(&upcomingEvents, queryUp, paramsUp...)
-	if err != nil {
-		upcomingEvents = []PublicEventResponse{}
-	}
+	config.DB.Select(&upcomingEvents, baseQuery+" WHERE e.publish_status = 'SCHEDULED' ORDER BY e.publish_at ASC")
+	if upcomingEvents == nil { upcomingEvents = []PublicEventResponse{} }
 
-	// Kirim kedua list ke Frontend
 	c.JSON(http.StatusOK, gin.H{
 		"events":   publishedEvents,
 		"upcoming": upcomingEvents,
@@ -91,28 +57,34 @@ func ListPublicEvents(c *gin.Context) {
 // GET EVENT DETAIL (PUBLIC)
 // =========================
 func GetEventDetail(c *gin.Context) {
-
 	eventID := c.Param("eventID")
 
-	// 1. Ambil Detail Event
-	// Kita izinkan user melihat event 'SCHEDULED' juga sebagai preview
+	// 1. Ambil Event (Izinkan PUBLISHED atau SCHEDULED)
 	var event models.Event
 	err := config.DB.Get(&event, `
-		SELECT * FROM events 
+		SELECT 
+			id, organization_id, title, description, category, thumbnail_url,
+			COALESCE(publish_status, 'DRAFT') as publish_status, 
+			publish_at, created_at, updated_at
+		FROM events 
 		WHERE id = ? AND (publish_status = 'PUBLISHED' OR publish_status = 'SCHEDULED')
 	`, eventID)
 
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Event not found or not available yet"})
+		fmt.Println("❌ Public Event Error:", err)
+		c.JSON(http.StatusNotFound, gin.H{"error": "Event tidak ditemukan atau belum rilis"})
 		return
 	}
 
-	// 2. Ambil Daftar Sesi
-	// Kita juga tampilkan sesi yang Published atau Scheduled (agar user tau silabusnya)
+	// 2. Ambil Sesi (Hanya yang tidak DRAFT)
 	var sessions []models.Session
 	err = config.DB.Select(&sessions, `
-		SELECT * FROM sessions
-		WHERE event_id = ? AND (publish_status = 'PUBLISHED' OR publish_status = 'SCHEDULED')
+		SELECT 
+			id, event_id, title, description, price, order_index, 
+			COALESCE(publish_status, 'DRAFT') as publish_status, 
+			publish_at, created_at
+		FROM sessions
+		WHERE event_id = ? AND publish_status != 'DRAFT'
 		ORDER BY order_index ASC
 	`, eventID)
 
