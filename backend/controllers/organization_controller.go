@@ -33,7 +33,7 @@ type ApplyOrganizationRequest struct {
 func ApplyOrganization(c *gin.Context) {
 	userID := c.GetInt64("user_id")
 
-	// 1. Check apakah user sudah pernah mengajukan
+	// 1. Check if user already has a pending application
 	var count int
 	config.DB.Get(&count,
 		"SELECT COUNT(*) FROM organization_applications WHERE user_id = ? AND status = 'PENDING'",
@@ -83,7 +83,149 @@ func ApplyOrganization(c *gin.Context) {
 	})
 }
 
-// Struktur Request untuk Sesi
+// =======================================
+// UPDATE EVENT (Title, Desc, Category)
+// =======================================
+func UpdateEvent(c *gin.Context) {
+	// 1. Get ID from param and user_id from token
+	// Supports both parameter names just in case
+	eventIDStr := c.Param("id")
+	if eventIDStr == "" {
+		eventIDStr = c.Param("eventID")
+	}
+
+	userID := c.GetInt64("user_id")
+
+	var eventID int64
+	if _, err := fmt.Sscan(eventIDStr, &eventID); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid event ID"})
+		return
+	}
+
+	// 2. Check Event Ownership
+	// Ensure this event belongs to the organization owned by this user
+	var count int
+	err := config.DB.Get(&count, `
+		SELECT COUNT(*) 
+		FROM events e
+		JOIN organizations o ON e.organization_id = o.id
+		WHERE e.id = ? AND o.owner_user_id = ?
+	`, eventID, userID)
+
+	if err != nil || count == 0 {
+		c.JSON(http.StatusForbidden, gin.H{"error": "You don't have permission to edit this event"})
+		return
+	}
+
+	// 3. Bind Input JSON
+	var input struct {
+		Title       string `json:"title"`
+		Description string `json:"description"`
+		Category    string `json:"category"`
+	}
+
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// 4. Perform Update
+	// Only update relevant fields. Publish status is not changed here.
+	_, err = config.DB.Exec(`
+		UPDATE events 
+		SET title = ?, description = ?, category = ?, updated_at = ?
+		WHERE id = ?
+	`, input.Title, input.Description, input.Category, time.Now(), eventID)
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update event"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Event updated successfully",
+		"data":    input,
+	})
+}
+
+// =======================================
+// UPLOAD EVENT THUMBNAIL
+// =======================================
+func UploadEventThumbnail(c *gin.Context) {
+	// 1. Get Event ID
+	eventIDStr := c.Param("id")
+	if eventIDStr == "" {
+		eventIDStr = c.Param("eventID")
+	}
+
+	userID := c.GetInt64("user_id")
+
+	var eventID int64
+	if _, err := fmt.Sscan(eventIDStr, &eventID); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid event ID"})
+		return
+	}
+
+	// 2. Check Ownership
+	var count int
+	err := config.DB.Get(&count, `
+		SELECT COUNT(*) FROM events e
+		JOIN organizations o ON e.organization_id = o.id
+		WHERE e.id = ? AND o.owner_user_id = ?
+	`, eventID, userID)
+
+	if err != nil || count == 0 {
+		c.JSON(http.StatusForbidden, gin.H{"error": "You don't have permission to edit this event"})
+		return
+	}
+
+	// 3. Get File from Form
+	file, err := c.FormFile("thumbnail")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Thumbnail file is required"})
+		return
+	}
+
+	// Validate Extension (Images Only)
+	ext := filepath.Ext(file.Filename)
+	if ext != ".jpg" && ext != ".jpeg" && ext != ".png" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Only jpg, jpeg, and png allowed"})
+		return
+	}
+
+	// 4. Save File
+	// Create folder if it doesn't exist
+	saveDir := "uploads/events"
+	if _, err := os.Stat(saveDir); os.IsNotExist(err) {
+		os.MkdirAll(saveDir, 0755)
+	}
+
+	// Filename format: event_thumb_{id}_{timestamp}.jpg
+	filename := fmt.Sprintf("event_thumb_%d_%d%s", eventID, time.Now().Unix(), ext)
+	savePath := filepath.Join(saveDir, filename)
+
+	if err := c.SaveUploadedFile(file, savePath); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save thumbnail image"})
+		return
+	}
+
+	// 5. Update Database
+	// Convert path separator to forward slash for URL consistency
+	dbPath := "uploads/events/" + filename
+
+	_, err = config.DB.Exec("UPDATE events SET thumbnail_url = ? WHERE id = ?", dbPath, eventID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update database"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message":       "Thumbnail updated successfully",
+		"thumbnail_url": dbPath,
+	})
+}
+
+// Request Structure for Session
 type CreateSessionRequest struct {
 	Title       string `json:"title" binding:"required"`
 	Description string `json:"description"`
@@ -103,7 +245,7 @@ func CreateSession(c *gin.Context) {
 		return
 	}
 
-	// Cek kepemilikan event
+	// Check event ownership
 	var count int
 	config.DB.Get(&count, "SELECT COUNT(*) FROM events WHERE id = ? AND organization_id = ?", eventID, orgID)
 	if count == 0 {
@@ -129,7 +271,7 @@ func CreateSession(c *gin.Context) {
 
 	if err != nil {
 		fmt.Println("❌ Error Create Session:", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal membuat sesi"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create session"})
 		return
 	}
 
@@ -137,130 +279,3 @@ func CreateSession(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Session created!", "session_id": sessionID})
 }
 
-// =======================================
-// UPDATE EVENT (Title, Desc, Category)
-// =======================================
-func UpdateEvent(c *gin.Context) {
-	// 1. Ambil ID dari param dan user_id dari token
-	eventIDStr := c.Param("eventID") // perhatikan nama param di route nanti
-	userID := c.GetInt64("user_id")
-
-	var eventID int64
-	if _, err := fmt.Sscan(eventIDStr, &eventID); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid event ID"})
-		return
-	}
-
-	// 2. Cek Kepemilikan Event
-	// Kita pastikan event ini milik organization yang dimiliki user ini
-	var count int
-	err := config.DB.Get(&count, `
-		SELECT COUNT(*) 
-		FROM events e
-		JOIN organizations o ON e.organization_id = o.id
-		WHERE e.id = ? AND o.owner_user_id = ?
-	`, eventID, userID)
-
-	if err != nil || count == 0 {
-		c.JSON(http.StatusForbidden, gin.H{"error": "You don't have permission to edit this event"})
-		return
-	}
-
-	// 3. Tangkap Input JSON
-	var input struct {
-		Title       string `json:"title"`
-		Description string `json:"description"`
-		Category    string `json:"category"`
-	}
-
-	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	// 4. Lakukan Update
-	// Kita hanya update field yang relevan. Publish status tidak diubah disini.
-	_, err = config.DB.Exec(`
-		UPDATE events 
-		SET title = ?, description = ?, category = ?, updated_at = ?
-		WHERE id = ?
-	`, input.Title, input.Description, input.Category, time.Now(), eventID)
-
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update event"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"message": "Event updated successfully",
-		"data":    input,
-	})
-}
-
-// =======================================
-// UPLOAD EVENT THUMBNAIL
-// =======================================
-func UploadEventThumbnail(c *gin.Context) {
-	// 1. Ambil ID Event
-	eventIDStr := c.Param("eventID")
-	userID := c.GetInt64("user_id")
-
-	var eventID int64
-	if _, err := fmt.Sscan(eventIDStr, &eventID); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid event ID"})
-		return
-	}
-
-	// 2. Cek Kepemilikan (PENTING)
-	var count int
-	err := config.DB.Get(&count, `
-		SELECT COUNT(*) FROM events e
-		JOIN organizations o ON e.organization_id = o.id
-		WHERE e.id = ? AND o.owner_user_id = ?
-	`, eventID, userID)
-
-	if err != nil || count == 0 {
-		c.JSON(http.StatusForbidden, gin.H{"error": "You don't have permission to edit this event"})
-		return
-	}
-
-	// 3. Ambil File dari Form
-	file, err := c.FormFile("thumbnail")
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Thumbnail file is required"})
-		return
-	}
-
-	// Validasi Ekstensi (Hanya Gambar)
-	ext := filepath.Ext(file.Filename)
-	if ext != ".jpg" && ext != ".jpeg" && ext != ".png" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Only jpg, jpeg, and png allowed"})
-		return
-	}
-
-	// 4. Simpan File
-	// Format nama: event_thumb_{id}_{timestamp}.jpg
-	filename := fmt.Sprintf("event_thumb_%d_%d%s", eventID, time.Now().Unix(), ext)
-	savePath := "uploads/events/" + filename
-
-	// Pastikan folder ada
-	os.MkdirAll("uploads/events", os.ModePerm)
-
-	if err := c.SaveUploadedFile(file, savePath); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save thumbnail image"})
-		return
-	}
-
-	// 5. Update Database
-	// Kita simpan path-nya saja
-	_, err = config.DB.Exec("UPDATE events SET thumbnail_url = ? WHERE id = ?", savePath, eventID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update database"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"message":       "Thumbnail updated successfully",
-		"thumbnail_url": savePath,
-	})
-}

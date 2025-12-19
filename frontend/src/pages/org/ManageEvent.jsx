@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-// Pastikan Anda sudah menambahkan fungsi updateSession, uploadEventThumbnail, deleteMaterial di api.js
+// Pastikan Anda sudah menambahkan fungsi updateSession, uploadEventThumbnail di api.js
 import api, { updateEvent, updateSession, uploadEventThumbnail } from "../../api"; 
 
 // --- 1. KOMPONEN MODAL VISIBILITAS ---
@@ -150,14 +150,12 @@ export default function ManageEvent() {
         const file = e.target.files[0];
         if (!file) return;
         
-        // Validasi ukuran (misal 10MB)
         if (file.size > 10 * 1024 * 1024) {
             alert("Ukuran file maksimal 10MB");
             return;
         }
 
         try {
-            // Panggil API uploadEventThumbnail
             const res = await uploadEventThumbnail(event.id, file);
             setEvent(prev => ({ ...prev, thumbnail_url: res.thumbnail_url }));
             alert("✅ Thumbnail berhasil diubah!");
@@ -425,24 +423,48 @@ export default function ManageEvent() {
                                     <p style={{color:"#666", fontSize:"0.9em", borderBottom:"1px solid #eee", paddingBottom:10}}>{s.description || "Tidak ada deskripsi"}</p>
                                     
                                     {/* --- 4. LIST VIDEO & FILE YANG SUDAH DIUPLOAD --- */}
-                                    {(s.videos || s.files) && (
-                                        <div style={{marginBottom:15}}>
-                                            {s.videos?.length > 0 && (
-                                                <div style={{marginBottom:10}}>
-                                                    <b style={{fontSize:"0.8em", color:"#2b6cb0"}}>Video Terupload:</b>
-                                                    <ul style={{fontSize:"0.85em", paddingLeft:20, margin:"5px 0", color:"#444"}}>
+                                    {((s.videos && s.videos.length > 0) || (s.files && s.files.length > 0)) && (
+                                        <div style={{marginTop: 15, padding: "15px", background: "#fafafa", borderRadius: 6, border: "1px solid #eee"}}>
+                                            
+                                            {/* LIST VIDEO */}
+                                            {s.videos && s.videos.length > 0 && (
+                                                <div style={{marginBottom: 15}}>
+                                                    <b style={{fontSize:"0.9em", color:"#2b6cb0", display:"block", marginBottom:8}}>🎥 Video Terupload:</b>
+                                                    <ul style={{listStyle:"none", padding:0, margin:0}}>
                                                         {s.videos.map(v => (
-                                                            <li key={v.id}>{v.title}</li>
+                                                            <li key={v.id} style={{display:"flex", alignItems:"center", gap:10, marginBottom:8, fontSize:"0.9em", background:"white", padding:"8px", borderRadius:4, border:"1px solid #e2e8f0", boxShadow:"0 1px 2px rgba(0,0,0,0.02)"}}>
+                                                                <span style={{flex:1}}>📺 {v.title}</span>
+                                                                <a 
+                                                                    href={`http://localhost:8080/${v.video_url}`} 
+                                                                    target="_blank" 
+                                                                    rel="noopener noreferrer"
+                                                                    style={{textDecoration:"none", color:"white", background:"#4299e1", padding:"4px 10px", borderRadius:4, fontSize:"0.8em", fontWeight:"bold"}}
+                                                                >
+                                                                    ▶ Lihat Video
+                                                                </a>
+                                                            </li>
                                                         ))}
                                                     </ul>
                                                 </div>
                                             )}
-                                            {s.files?.length > 0 && (
-                                                <div style={{marginBottom:10}}>
-                                                    <b style={{fontSize:"0.8em", color:"#c05621"}}>Modul Terupload:</b>
-                                                    <ul style={{fontSize:"0.85em", paddingLeft:20, margin:"5px 0", color:"#444"}}>
+
+                                            {/* LIST FILE */}
+                                            {s.files && s.files.length > 0 && (
+                                                <div>
+                                                    <b style={{fontSize:"0.9em", color:"#c05621", display:"block", marginBottom:8}}>📄 Modul Terupload:</b>
+                                                    <ul style={{listStyle:"none", padding:0, margin:0}}>
                                                         {s.files.map(f => (
-                                                            <li key={f.id}>{f.title}</li>
+                                                            <li key={f.id} style={{display:"flex", alignItems:"center", gap:10, marginBottom:8, fontSize:"0.9em", background:"white", padding:"8px", borderRadius:4, border:"1px solid #e2e8f0", boxShadow:"0 1px 2px rgba(0,0,0,0.02)"}}>
+                                                                <span style={{flex:1}}>📑 {f.title}</span>
+                                                                <a 
+                                                                    href={`http://localhost:8080/${f.file_url}`} 
+                                                                    target="_blank" 
+                                                                    rel="noopener noreferrer"
+                                                                    style={{textDecoration:"none", color:"white", background:"#ed8936", padding:"4px 10px", borderRadius:4, fontSize:"0.8em", fontWeight:"bold"}}
+                                                                >
+                                                                    ⬇ Download
+                                                                </a>
+                                                            </li>
                                                         ))}
                                                     </ul>
                                                 </div>

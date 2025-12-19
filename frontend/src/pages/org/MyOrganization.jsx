@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import api from "../../api";
+import api, { uploadEventThumbnail } from "../../api";
 
 export default function MyOrganization() {
     const [events, setEvents] = useState([]);
@@ -9,6 +9,7 @@ export default function MyOrganization() {
     // State untuk Create Event Baru (Modal/Form simple)
     const [showCreate, setShowCreate] = useState(false);
     const [newEvent, setNewEvent] = useState({ title: "", description: "", category: "Teknologi" });
+    const [thumbnailFile, setThumbnailFile] = useState(null);
 
     useEffect(() => {
         fetchMyEvents();
@@ -29,12 +30,27 @@ export default function MyOrganization() {
     const handleCreateEvent = async (e) => {
         e.preventDefault();
         try {
-            await api.post("/organization/events", newEvent);
+            // 1) Buat event terlebih dahulu
+            const res = await api.post("/organization/events", newEvent);
+            const createdId = res.data?.event_id || res.data?.id || res.data?.ID || null;
+
+            // 2) Jika ada thumbnail, upload ke endpoint terpisah
+            if (thumbnailFile && createdId) {
+                try {
+                    await uploadEventThumbnail(createdId, thumbnailFile);
+                } catch (err) {
+                    console.error("Gagal upload thumbnail:", err);
+                    alert("Event berhasil dibuat, tetapi gagal upload thumbnail. Anda bisa menguploadnya nanti di Manage.");
+                }
+            }
+
             alert("Event berhasil dibuat!");
             setShowCreate(false);
             setNewEvent({ title: "", description: "", category: "Teknologi" });
+            setThumbnailFile(null);
             fetchMyEvents(); // Refresh list
         } catch (error) {
+            console.error(error);
             alert("Gagal buat event: " + (error.response?.data?.error || "Error"));
         }
     };
@@ -76,6 +92,23 @@ export default function MyOrganization() {
                             <option value="Desain">Desain</option>
                             <option value="Lainnya">Lainnya</option>
                         </select>
+                        {/* Thumbnail file input */}
+                        <div style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 6, flexWrap: "wrap" }}>
+                            <input
+                                id="org-create-thumb"
+                                type="file"
+                                accept="image/*"
+                                onChange={e => setThumbnailFile(e.target.files?.[0] || null)}
+                                style={{ display: "block", padding: 6 }}
+                            />
+                            <button type="button" onClick={() => document.getElementById('org-create-thumb').click()} style={{ padding: "8px 12px", borderRadius: 6, border: "1px solid #ccc", background: "#f0f0f0", cursor: "pointer" }}>📁 Pilih Thumbnail</button>
+                            <span style={{ color: "#666", fontSize: "0.9em", fontStyle: "italic" }}>{thumbnailFile ? thumbnailFile.name : "Belum memilih file"}</span>
+                        </div>
+                        {thumbnailFile && (
+                            <div style={{ marginTop: 8 }}>
+                                <img src={URL.createObjectURL(thumbnailFile)} alt="preview" style={{ maxWidth: 200, maxHeight: 140, borderRadius: 6 }} />
+                            </div>
+                        )}
                         <button type="submit" style={{ background: "#48bb78", color: "white", padding: "10px", border: "none", borderRadius: "5px", cursor: "pointer" }}>Simpan Event</button>
                     </form>
                 </div>
@@ -87,11 +120,11 @@ export default function MyOrganization() {
                     {events.length === 0 && <p>Belum ada event. Silakan buat baru.</p>}
                     
                     {events.map(evt => (
-                        <div key={evt.id} style={{ border: "1px solid #e2e8f0", padding: "20px", borderRadius: "8px", display: "flex", justifyContent: "space-between", alignItems: "center", background: "white", boxShadow: "0 2px 5px rgba(0,0,0,0.05)" }}>
+                        <div key={evt.id} style={{ border: "1px solid #e2e8f0", padding: "20px", borderRadius: "8px", display: "flex", justifyContent: "space-between", alignItems: "center", background: "white", color: "black", boxShadow: "0 2px 5px rgba(0,0,0,0.05)" }}>
                             <div>
-                                <h3 style={{ margin: "0 0 5px 0" }}>{evt.title}</h3>
+                                <h3 style={{ margin: "0 0 5px 0", color: "black" }}>{evt.title}</h3>
                                 <div style={{display:"flex", gap:"10px", alignItems:"center"}}>
-                                    <span style={{ background: "#edf2f7", fontSize: "0.8em", padding: "3px 8px", borderRadius: "5px" }}>{evt.category}</span>
+                                    <span style={{ background: "#edf2f7", color: "#2d3748", fontSize: "0.8em", padding: "3px 8px", borderRadius: "5px" }}>{evt.category}</span>
                                     <span style={{ 
                                         fontSize: "0.8em", fontWeight: "bold",
                                         color: evt.publish_status === 'PUBLISHED' ? "green" : (evt.publish_status === 'SCHEDULED' ? "orange" : "gray")
