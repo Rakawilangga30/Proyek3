@@ -100,6 +100,8 @@ func RegisterRoutes(r *gin.Engine) {
 		org.PUT("/sessions/:sessionID/publish", controllers.PublishSession)
 		org.PUT("/sessions/:sessionID/unpublish", controllers.UnpublishSession)
 		org.PUT("/sessions/:sessionID/schedule", controllers.ScheduleSessionPublish)
+		// Update Session Info
+		org.PUT("/sessions/:sessionID", controllers.UpdateSession)
 
 		// Upload Materi
 		org.POST("/sessions/:sessionID/videos", controllers.UploadSessionVideo)
