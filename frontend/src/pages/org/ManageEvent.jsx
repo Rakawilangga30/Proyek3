@@ -1,12 +1,85 @@
 import { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
-// Pastikan fungsi-fungsi ini ada di api.js Anda
+import { useParams, Link, useNavigate } from "react-router-dom";
 import api, { updateEvent, updateSession, uploadEventThumbnail } from "../../api"; 
 
-// --- 1. KOMPONEN MODAL VISIBILITAS ---
+// ==========================================
+// 1. KOMPONEN HELPER: MATERIAL ITEM
+// ==========================================
+const MaterialItem = ({ item, type, onEdit, onDelete }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const isVideo = type === 'video';
+    const icon = isVideo ? '📺' : '📑';
+    const btnText = isVideo ? '▶ Putar' : '⬇ Download';
+    const btnColor = isVideo ? '#3182ce' : '#dd6b20'; 
+    const url = isVideo ? item.video_url : item.file_url;
+    const descBg = isVideo ? "#f7fafc" : "#fffaf0";
+    const descBorder = isVideo ? "#edf2f7" : "#feebc8";
+
+    return (
+        <div style={{background:"white", padding:"12px 15px", borderRadius:4, border:"1px solid #eee"}}>
+            <div style={{display:"flex", alignItems:"center", gap:10, justifyContent:"space-between"}}>
+                <div onClick={() => setIsOpen(!isOpen)} style={{display:"flex", alignItems:"center", gap:10, cursor:"pointer", flex:1, userSelect:"none"}}>
+                    <span style={{fontSize:"0.7em", color:"#aaa", transform: isOpen ? "rotate(180deg)" : "rotate(90deg)", transition:"transform 0.2s"}}>▼</span>
+                    <span style={{fontWeight:"bold", fontSize:"1em", color:"#333"}}>{icon} {item.title}</span>
+                </div>
+                <div style={{display:"flex", gap:8}}>
+                    <button onClick={(e) => { e.stopPropagation(); onEdit(item, type); }} style={{border:"1px solid #cbd5e0", background:"white", color:"#4a5568", borderRadius:4, padding:"4px 8px", cursor:"pointer", fontSize:"0.8em"}} title="Edit Info">✏️</button>
+                    <button onClick={(e) => { e.stopPropagation(); onDelete(item, type); }} style={{border:"1px solid #fc8181", background:"#fff5f5", color:"#c53030", borderRadius:4, padding:"4px 8px", cursor:"pointer", fontSize:"0.8em"}} title="Hapus Materi">🗑</button>
+                    <a href={`http://localhost:8080/${url}`} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} style={{textDecoration:"none", color:"white", background: btnColor, padding:"4px 12px", borderRadius:4, fontSize:"0.8em", fontWeight: "500"}}>{btnText}</a>
+                </div>
+            </div>
+            {isOpen && item.description && (
+                <div style={{marginTop: "12px", padding: "12px", backgroundColor: descBg, borderRadius: "6px", border: `1px solid ${descBorder}`, maxHeight: "150px", overflowY: "auto", whiteSpace: "pre-wrap", fontSize: "0.9em", color: "#4a5568", lineHeight: "1.6", textAlign: "justify", marginLeft: "20px"}}>
+                    {item.description}
+                </div>
+            )}
+        </div>
+    );
+};
+
+// ==========================================
+// 2. MODAL UPDATE MATERI
+// ==========================================
+const UpdateMaterialModal = ({ isOpen, config, onClose, onSave }) => {
+    if (!isOpen) return null;
+    const [title, setTitle] = useState(config.initialTitle || "");
+    const [description, setDescription] = useState(config.initialDesc || "");
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        if (isOpen) {
+            setTitle(config.initialTitle || "");
+            setDescription(config.initialDesc || "");
+        }
+    }, [isOpen, config]);
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+        await onSave(config.type, config.sessionId, config.mediaId, title, description);
+        setLoading(false);
+        onClose();
+    };
+
+    return (
+        <div style={modalOverlayStyle}>
+            <div style={{...modalContentStyle, width: "600px"}}>
+                <h3 style={{marginTop:0, borderBottom:"1px solid #eee", paddingBottom:10}}>✏️ Edit Info {config.type === 'video' ? 'Video' : 'Modul'}</h3>
+                <form onSubmit={handleSubmit} style={{display:"flex", flexDirection:"column", gap:15}}>
+                    <div><label style={{display:"block", marginBottom:5, fontWeight:"bold"}}>Judul Materi</label><input type="text" value={title} onChange={(e) => setTitle(e.target.value)} required style={{width:"100%", padding:10, border:"1px solid #ccc", borderRadius:4}} /></div>
+                    <div><label style={{display:"block", marginBottom:5, fontWeight:"bold"}}>Deskripsi / Penjelasan</label><textarea value={description} onChange={(e) => setDescription(e.target.value)} rows="8" style={{width:"100%", padding:10, border:"1px solid #ccc", borderRadius:4, fontFamily:"inherit", lineHeight: "1.5", resize: "vertical"}} /></div>
+                    <div style={{display:"flex", justifyContent:"flex-end", gap:10, marginTop:10}}><button type="button" onClick={onClose} disabled={loading} style={btnSecondaryStyle}>Batal</button><button type="submit" disabled={loading} style={btnPrimaryStyle}>{loading ? "Menyimpan..." : "Simpan Perubahan"}</button></div>
+                </form>
+            </div>
+        </div>
+    );
+};
+
+// ==========================================
+// 3. KOMPONEN HELPER LAIN
+// ==========================================
 const VisibilityModal = ({ config, onClose, onSave }) => {
     if (!config.isOpen) return null;
-
     const [status, setStatus] = useState(config.currentStatus || 'DRAFT');
     const [scheduleDate, setScheduleDate] = useState('');
     const [loading, setLoading] = useState(false);
@@ -25,244 +98,210 @@ const VisibilityModal = ({ config, onClose, onSave }) => {
 
     const handleSave = async () => {
         setLoading(true);
-        if (status === 'SCHEDULED' && !scheduleDate) {
-            alert("Silakan pilih tanggal dan jam penayangan!");
-            setLoading(false);
-            return;
-        }
+        if (status === 'SCHEDULED' && !scheduleDate) { alert("Pilih tanggal!"); setLoading(false); return; }
         await onSave(status, scheduleDate);
-        setLoading(false);
-        onClose();
+        setLoading(false); onClose();
     };
 
     return (
-        <div style={{
-            position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
-            backgroundColor: "rgba(0,0,0,0.5)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 9999
-        }}>
-            <div style={{ background: "white", padding: "25px", borderRadius: "8px", width: "400px", maxWidth: "90%", boxShadow: "0 4px 15px rgba(0,0,0,0.3)" }}>
-                <h3 style={{marginTop:0, borderBottom:"1px solid #eee", paddingBottom:10}}>👁️ Atur Status: {config.type}</h3>
+        <div style={modalOverlayStyle}>
+            <div style={modalContentStyle}>
+                <h3 style={{marginTop:0, borderBottom:"1px solid #eee", paddingBottom:10}}>👁️ Atur Status</h3>
                 <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "20px" }}>
-                    <label style={{ display: "flex", gap: "10px", padding: "10px", border: "1px solid #ddd", borderRadius: "5px", cursor:"pointer", background: status==='DRAFT'?'#f7fafc':'white' }}>
-                        <input type="radio" name="vis" value="DRAFT" checked={status === 'DRAFT'} onChange={() => setStatus('DRAFT')} />
-                        <div><b>🔒 Private (Draft)</b><br/><small style={{color:"#718096"}}>Hanya Anda yang bisa melihat.</small></div>
-                    </label>
-                    <label style={{ display: "flex", gap: "10px", padding: "10px", border: "1px solid #ddd", borderRadius: "5px", cursor:"pointer", background: status==='PUBLISHED'?'#f0fff4':'white' }}>
-                        <input type="radio" name="vis" value="PUBLISHED" checked={status === 'PUBLISHED'} onChange={() => setStatus('PUBLISHED')} />
-                        <div><b>🌍 Public (Tayang)</b><br/><small style={{color:"#718096"}}>Dapat dilihat semua orang.</small></div>
-                    </label>
-                    <label style={{ display: "flex", gap: "10px", padding: "10px", border: "1px solid #ddd", borderRadius: "5px", cursor:"pointer", background: status==='SCHEDULED'?'#fffaf0':'white' }}>
-                        <input type="radio" name="vis" value="SCHEDULED" checked={status === 'SCHEDULED'} onChange={() => setStatus('SCHEDULED')} />
-                        <div><b>📅 Jadwalkan</b><br/><small style={{color:"#718096"}}>Tayang otomatis nanti.</small></div>
-                    </label>
-                    {status === 'SCHEDULED' && (
-                        <div style={{marginLeft:30}}>
-                            <input type="datetime-local" value={scheduleDate} onChange={(e) => setScheduleDate(e.target.value)} style={{width: "100%", padding: "8px", border:"1px solid #ccc", borderRadius:4}} />
-                        </div>
-                    )}
+                    <label style={{ ...radioLabelStyle, background: status==='DRAFT'?'#f7fafc':'white' }}><input type="radio" name="vis" value="DRAFT" checked={status === 'DRAFT'} onChange={() => setStatus('DRAFT')} /> Private (Draft)</label>
+                    <label style={{ ...radioLabelStyle, background: status==='PUBLISHED'?'#f0fff4':'white' }}><input type="radio" name="vis" value="PUBLISHED" checked={status === 'PUBLISHED'} onChange={() => setStatus('PUBLISHED')} /> Public (Tayang)</label>
+                    <label style={{ ...radioLabelStyle, background: status==='SCHEDULED'?'#fffaf0':'white' }}><input type="radio" name="vis" value="SCHEDULED" checked={status === 'SCHEDULED'} onChange={() => setStatus('SCHEDULED')} /> Jadwalkan</label>
+                    {status === 'SCHEDULED' && <input type="datetime-local" value={scheduleDate} onChange={(e) => setScheduleDate(e.target.value)} style={{marginLeft:30, width:"90%", padding:8}} />}
                 </div>
-                <div style={{display:"flex", justifyContent:"flex-end", gap:10}}>
-                    <button onClick={onClose} disabled={loading} style={{ padding: "8px 15px", border: "none", background: "#cbd5e0", borderRadius: "4px", cursor: "pointer" }}>Batal</button>
-                    <button onClick={handleSave} disabled={loading} style={{ background: "#3182ce", color: "white", padding: "8px 15px", border: "none", borderRadius: "4px", cursor: "pointer", fontWeight:"bold" }}>{loading ? "Menyimpan..." : "Simpan Status"}</button>
-                </div>
+                <div style={{display:"flex", justifyContent:"flex-end", gap:10}}><button onClick={onClose} disabled={loading} style={btnSecondaryStyle}>Batal</button><button onClick={handleSave} disabled={loading} style={btnPrimaryStyle}>Simpan</button></div>
             </div>
         </div>
     );
 };
 
-// --- 2. KOMPONEN UTAMA MANAGE EVENT ---
+const UploadModal = ({ isOpen, type, onClose, onUpload }) => {
+    if (!isOpen) return null;
+    const [file, setFile] = useState(null);
+    const [title, setTitle] = useState("");
+    const [description, setDescription] = useState("");
+    const [loading, setLoading] = useState(false);
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        if (!file) return alert("Pilih file!");
+        setLoading(true);
+        await onUpload(file, title.trim() || file.name, description);
+        setLoading(false); setFile(null); setTitle(""); setDescription(""); onClose();
+    };
+
+    return (
+        <div style={modalOverlayStyle}>
+            <div style={{...modalContentStyle, width: "600px"}}>
+                <h3 style={{marginTop:0, borderBottom:"1px solid #eee", paddingBottom:10}}>Upload {type === 'video' ? 'Video' : 'Modul'}</h3>
+                <form onSubmit={handleSubmit} style={{display:"flex", flexDirection:"column", gap:15}}>
+                    <input type="file" onChange={(e) => setFile(e.target.files[0])} required style={{padding:5, border:"1px solid #ccc"}} />
+                    <input type="text" placeholder="Judul (Opsional)" value={title} onChange={(e) => setTitle(e.target.value)} style={{padding:10, border:"1px solid #ccc"}} />
+                    <textarea placeholder="Deskripsi..." value={description} onChange={(e) => setDescription(e.target.value)} rows="5" style={{padding:10, border:"1px solid #ccc"}} />
+                    <div style={{display:"flex", justifyContent:"flex-end", gap:10}}><button type="button" onClick={onClose} style={btnSecondaryStyle}>Batal</button><button type="submit" disabled={loading} style={btnPrimaryStyle}>Upload</button></div>
+                </form>
+            </div>
+        </div>
+    );
+};
+
+// ==========================================
+// 4. MAIN COMPONENT: MANAGE EVENT
+// ==========================================
 export default function ManageEvent() {
     const { eventID } = useParams();
-    
-    // State Data
+    const navigate = useNavigate();
     const [event, setEvent] = useState(null);
     const [sessions, setSessions] = useState([]);
-    
-    // State UI
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [modalConfig, setModalConfig] = useState({ isOpen: false, type: '', id: null, title: '', currentStatus: '', currentDate: null });
+    
+    // Config Modals
+    const [visModal, setVisModal] = useState({ isOpen: false });
+    const [uploadModal, setUploadModal] = useState({ isOpen: false });
+    const [updateModal, setUpdateModal] = useState({ isOpen: false, type: '', sessionId: null, mediaId: null, initialTitle: '', initialDesc: '' });
 
-    // State Edit Event
+    // States
     const [isEditingEvent, setIsEditingEvent] = useState(false);
-    const [editEventForm, setEditEventForm] = useState({ title: "", description: "", category: "" });
-    const [savingEvent, setSavingEvent] = useState(false);
-
-    // --- State Edit Session ---
-    const [editingSessionId, setEditingSessionId] = useState(null);
-    const [editSessionForm, setEditSessionForm] = useState({ title: "", description: "", price: 0 });
-    const [savingSession, setSavingSession] = useState(false);
-
-    // State Create & Upload
+    const [editEventForm, setEditEventForm] = useState({});
+    const [editSessionId, setEditSessionId] = useState(null);
+    const [editSessionForm, setEditSessionForm] = useState({});
     const [newSession, setNewSession] = useState({ title: "", description: "", price: 0 });
-    const [uploadingId, setUploadingId] = useState(null); 
 
-    useEffect(() => {
-        loadData();
-    }, [eventID]);
+    useEffect(() => { loadData(); }, [eventID]);
 
     const loadData = async () => {
         setLoading(true);
-        setError(null);
         try {
             const res = await api.get(`/organization/events/${eventID}`);
-            console.log("Loaded Data:", res.data);
             setEvent(res.data.event);
             setSessions(res.data.sessions || []);
-        } catch (err) {
-            console.error("Error loading event:", err);
-            setError("Gagal memuat event. Pastikan Anda login dan pemilik event ini.");
-        } finally {
-            setLoading(false);
-        }
+        } catch (err) { setError("Gagal memuat data."); } 
+        finally { setLoading(false); }
     };
 
-    // --- HANDLER UPDATE EVENT ---
-    const handleEditEventClick = () => {
-        setEditEventForm({
-            title: event.title,
-            description: event.description,
-            category: event.category || "Technology"
-        });
-        setIsEditingEvent(true);
-    };
-
-    const handleUpdateEventSubmit = async (e) => {
-        e.preventDefault();
-        setSavingEvent(true);
-        try {
-            await updateEvent(event.id, editEventForm);
-            setEvent(prev => ({ ...prev, ...editEventForm }));
-            setIsEditingEvent(false);
-            alert("✅ Info Event berhasil diperbarui!");
-        } catch (err) {
-            console.error(err);
-            alert("❌ Gagal update event: " + (err.response?.data?.error || "Terjadi kesalahan"));
-        } finally {
-            setSavingEvent(false);
-        }
-    };
-
-    // --- HANDLER UPLOAD THUMBNAIL (COVER) ---
+    // --- FITUR GANTI THUMBNAIL (YANG KEMBALI) ---
     const handleThumbnailChange = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
-        
         try {
             const res = await uploadEventThumbnail(event.id, file);
             setEvent(prev => ({ ...prev, thumbnail_url: res.thumbnail_url }));
             alert("✅ Thumbnail berhasil diubah!");
         } catch (error) {
-            console.error(error);
             alert("❌ Gagal upload thumbnail");
         }
     };
 
-    // --- HANDLER UPDATE SESSION ---
-    const handleEditSessionClick = (session) => {
-        setEditingSessionId(session.id);
-        setEditSessionForm({
-            title: session.title,
-            description: session.description,
-            price: session.price
-        });
-    };
-
-    const handleUpdateSessionSubmit = async (e) => {
-        e.preventDefault();
-        setSavingSession(true);
-        try {
-            await updateSession(editingSessionId, editSessionForm);
-            setSessions(prev => prev.map(s => 
-                s.id === editingSessionId ? { ...s, ...editSessionForm } : s
-            ));
-            setEditingSessionId(null);
-            alert("✅ Sesi berhasil diperbarui!");
-        } catch (error) {
-            console.error(error);
-            alert("❌ Gagal update sesi: " + (error.response?.data?.error || "Error"));
-        } finally {
-            setSavingSession(false);
+    // --- HANDLER LAINNYA ---
+    const handleDeleteEvent = async () => {
+        const confirmMsg = "⚠️ PERINGATAN KERAS!\n\nApakah Anda yakin ingin menghapus Event ini?\n\nTindakan ini akan MENGHAPUS SEMUA SESI dan MATERI (Video/File) yang ada di dalamnya secara permanen.\n\nData tidak dapat dikembalikan.";
+        if (window.confirm(confirmMsg)) {
+            try {
+                await api.delete(`/organization/events/${event.id}`);
+                alert("Event berhasil dihapus.");
+                navigate("/org"); 
+            } catch (error) {
+                alert("Gagal menghapus event: " + (error.response?.data?.error || "Error"));
+            }
         }
     };
 
-    // --- HANDLER CREATE SESSION ---
+    const handleDeleteSession = async (sessionId) => {
+        const confirmMsg = "Apakah Anda yakin ingin menghapus Sesi ini?\n\nSemua materi (Video/File) dalam sesi ini akan ikut terhapus.";
+        if (window.confirm(confirmMsg)) {
+            try {
+                await api.delete(`/organization/sessions/${sessionId}`);
+                alert("Sesi berhasil dihapus.");
+                loadData(); 
+                setEditSessionId(null);
+            } catch (error) {
+                alert("Gagal menghapus sesi: " + (error.response?.data?.error || "Error"));
+            }
+        }
+    };
+
+    const handleDeleteMaterial = async (item, type, sessionId) => {
+        const label = type === 'video' ? 'Video' : 'File';
+        if (window.confirm(`Yakin ingin menghapus ${label}: "${item.title}"?`)) {
+            try {
+                await api.delete(`/organization/sessions/${sessionId}/${type}s/${item.id}`);
+                alert(`${label} berhasil dihapus!`);
+                loadData(); 
+            } catch (error) {
+                alert(`Gagal menghapus ${label}: ` + (error.response?.data?.error || "Error"));
+            }
+        }
+    };
+
+    const handleEditSessionClick = (session) => {
+        setEditSessionId(session.id);
+        setEditSessionForm({ title: session.title, description: session.description, price: session.price });
+    };
+
+    const handleUpdateSession = async (e) => {
+        e.preventDefault();
+        try { 
+            await updateSession(editSessionId, editSessionForm); 
+            setSessions(prev => prev.map(s => s.id === editSessionId ? {...s, ...editSessionForm} : s));
+            setEditSessionId(null); 
+            alert("✅ Sesi berhasil diupdate!"); 
+        } catch(e){ alert("Gagal update sesi"); }
+    };
+
+    const openUpdateModal = (item, type, sessionId) => {
+        setUpdateModal({ isOpen: true, type, sessionId, mediaId: item.id, initialTitle: item.title, initialDesc: item.description });
+    };
+
+    const handleUpdateMaterialSubmit = async (type, sessionId, mediaId, title, description) => {
+        try {
+            await api.put(`/organization/sessions/${sessionId}/${type}s/${mediaId}`, { title, description });
+            alert("✅ Berhasil diperbarui!"); loadData(); 
+        } catch (error) { alert("❌ Gagal update"); }
+    };
+
+    const handleUpdateEvent = async (e) => {
+        e.preventDefault();
+        try { await updateEvent(event.id, editEventForm); setEvent({...event, ...editEventForm}); setIsEditingEvent(false); alert("Updated!"); } catch(e){ alert("Error updating event"); }
+    };
+
     const handleCreateSession = async (e) => {
         e.preventDefault();
-        try {
-            await api.post(`/organization/events/${eventID}/sessions`, newSession);
-            alert("✅ Sesi berhasil ditambahkan!");
-            setNewSession({ title: "", description: "", price: 0 });
-            loadData(); 
-        } catch (error) {
-            alert("Gagal: " + (error.response?.data?.error || "Error"));
-        }
+        try { await api.post(`/organization/events/${eventID}/sessions`, newSession); setNewSession({title:"", description:"", price:0}); loadData(); alert("Created!"); } catch(e){ alert("Error"); }
     };
 
-    // --- HANDLER UPLOAD MATERI ---
-    const handleUpload = async (type, sessionID, fileInput) => {
-        const file = fileInput.files[0];
-        if (!file) return alert(`Pilih file ${type} dulu!`);
-
+    const handleUploadSubmit = async (file, title, desc) => {
         const formData = new FormData();
-        formData.append(type === 'video' ? 'video' : 'file', file);
-        formData.append("title", file.name);
-        
-        setUploadingId(`${type}-${sessionID}`);
-        try {
-            await api.post(`/organization/sessions/${sessionID}/${type}s`, formData, {
-                headers: { "Content-Type": "multipart/form-data" }
-            });
-            alert("✅ Upload Berhasil!");
-            fileInput.value = "";
-            loadData(); // Reload untuk menampilkan materi baru
-        } catch (error) {
-            console.error(error);
-            alert("❌ Gagal Upload: " + (error.response?.data?.error || "Error"));
-        } finally {
-            setUploadingId(null);
-        }
+        formData.append(uploadModal.type==='video'?'video':'file', file);
+        formData.append("title", title); formData.append("description", desc);
+        try { await api.post(`/organization/sessions/${uploadModal.sessionId}/${uploadModal.type}s`, formData); loadData(); alert("Uploaded!"); } catch(e){ alert("Error"); }
     };
 
     const handleSaveVisibility = async (status, date) => {
-        const { type, id } = modalConfig;
         try {
-            let endpoint = type === 'Event' ? `/organization/events/${id}` : `/organization/sessions/${id}`;
-            if (status === 'PUBLISHED') endpoint += `/publish`;
-            else if (status === 'DRAFT') endpoint += `/unpublish`;
-            else endpoint += `/schedule`;
-
-            const payload = status === 'SCHEDULED' ? { publish_at: date } : {}; 
-            const res = await api.put(endpoint, payload);
-            
-            if (type === 'Event') {
-                setEvent(prev => ({ ...prev, publish_status: res.data.status, publish_at: res.data.publish_at }));
-            } else {
-                setSessions(prev => prev.map(s => s.id === id ? { ...s, publish_status: res.data.status, publish_at: res.data.publish_at } : s));
-            }
-            alert(`Status berhasil diubah menjadi: ${res.data.status}`);
-        } catch (error) {
-            alert("Gagal update status.");
-        }
+            let ep = visModal.type === 'Event' ? `/organization/events/${visModal.id}` : `/organization/sessions/${visModal.id}`;
+            ep += status === 'PUBLISHED' ? '/publish' : (status === 'DRAFT' ? '/unpublish' : '/schedule');
+            await api.put(ep, status==='SCHEDULED'?{publish_at:date}:{}); loadData(); alert("Status Updated!");
+        } catch(e) { alert("Error"); }
     };
 
-    const openModal = (type, item) => {
-        setModalConfig({ isOpen: true, type: type, id: item.id, title: item.title, currentStatus: item.publish_status, currentDate: item.publish_at });
-    };
-
-    if (loading) return <div style={{padding:50, textAlign:"center"}}>⏳ Memuat Data...</div>;
-    if (error) return <div style={{padding:50, textAlign:"center", color:"red"}}>⚠️ {error} <br/><br/> <Link to="/org">Kembali ke Dashboard</Link></div>;
-    if (!event) return null;
+    if (loading) return <div style={{padding:50, textAlign:"center"}}>⏳ Memuat...</div>;
+    if (error) return <div style={{padding:50, textAlign:"center", color:"red"}}>{error}</div>;
 
     return (
         <div style={{ padding: "20px", maxWidth: "1000px", margin: "0 auto", fontFamily: "sans-serif" }}>
-            
-            <VisibilityModal config={modalConfig} onClose={() => setModalConfig({...modalConfig, isOpen: false})} onSave={handleSaveVisibility} />
+            <VisibilityModal config={visModal} onClose={()=>setVisModal({...visModal, isOpen:false})} onSave={handleSaveVisibility} />
+            <UploadModal isOpen={uploadModal.isOpen} type={uploadModal.type} onClose={()=>setUploadModal({...uploadModal, isOpen:false})} onUpload={handleUploadSubmit} />
+            <UpdateMaterialModal isOpen={updateModal.isOpen} config={updateModal} onClose={() => setUpdateModal({...updateModal, isOpen: false})} onSave={handleUpdateMaterialSubmit} />
 
-            <div style={{ marginBottom: 30, paddingBottom: 20, borderBottom: "1px solid #eee" }}>
+            <div style={{marginBottom:30, paddingBottom:20, borderBottom:"1px solid #eee"}}>
                 <Link to="/org" style={{textDecoration:"none", color:"#555"}}>⬅️ Kembali</Link>
                 
-                {/* THUMBNAIL */}
+                {/* --- BAGIAN THUMBNAIL (SUDAH DIKEMBALIKAN) --- */}
                 <div style={{marginTop: 20, marginBottom: 20, position: "relative", width: "100%", height: "250px", background: "#f0f0f0", borderRadius: "8px", overflow: "hidden", border: "1px dashed #ccc"}}>
                     {event.thumbnail_url ? (
                         <img src={`http://localhost:8080/${event.thumbnail_url}`} alt="Event Cover" style={{width: "100%", height: "100%", objectFit: "cover"}} onError={(e) => { e.target.onerror = null; e.target.src="https://via.placeholder.com/800x250?text=Error+Loading+Image"; }} />
@@ -275,128 +314,91 @@ export default function ManageEvent() {
                     </div>
                 </div>
 
-                {!isEditingEvent ? (
-                    <div style={{display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginTop:10}}>
-                        <div>
-                            <span style={{background:"#bee3f8", color:"#2b6cb0", padding:"2px 8px", borderRadius:4, fontSize:"0.8em", fontWeight:"bold"}}>{event.category || "Uncategorized"}</span>
-                            <h1 style={{margin:"10px 0"}}>{event.title}</h1>
-                            <p style={{color:"#666", margin:"5px 0", whiteSpace:"pre-wrap"}}>{event.description}</p>
-                        </div>
-                        <div style={{display:"flex", flexDirection:"column", gap:10, alignItems:"flex-end"}}>
-                            <button onClick={handleEditEventClick} style={{padding:"8px 16px", background:"#3182ce", color:"white", border:"none", borderRadius:5, cursor:"pointer"}}>✏️ Edit Info</button>
-                            <button onClick={() => openModal('Event', event)} style={{padding:"10px 20px", cursor:"pointer", borderRadius:5, border:"1px solid #ccc", background:"white"}}>Status: <b style={{color: event.publish_status === 'PUBLISHED' ? 'green' : (event.publish_status === 'SCHEDULED' ? 'orange' : 'gray')}}>{event.publish_status || 'DRAFT'}</b> ⚙️</button>
-                        </div>
-                    </div>
-                ) : (
-                    <div style={{marginTop:10, background:"#f7fafc", padding:20, borderRadius:8, border:"1px solid #e2e8f0"}}>
-                        <h2 style={{marginTop:0}}>✏️ Edit Detail Event</h2>
-                        <form onSubmit={handleUpdateEventSubmit} style={{display:"flex", flexDirection:"column", gap:15}}>
-                            <input type="text" value={editEventForm.title} onChange={e => setEditEventForm({...editEventForm, title: e.target.value})} style={{width:"100%", padding:10, border:"1px solid #ccc", borderRadius:4}} required />
-                            <select value={editEventForm.category} onChange={e => setEditEventForm({...editEventForm, category: e.target.value})} style={{width:"100%", padding:10, border:"1px solid #ccc", borderRadius:4}}>
-                                <option value="Technology">Technology</option>
-                                <option value="Business">Business</option>
-                                <option value="Design">Design</option>
-                                <option value="Lifestyle">Lifestyle</option>
-                            </select>
-                            <textarea rows="5" value={editEventForm.description} onChange={e => setEditEventForm({...editEventForm, description: e.target.value})} style={{width:"100%", padding:10, border:"1px solid #ccc", borderRadius:4}} required />
+                <div style={{marginTop:20}}>
+                    {!isEditingEvent ? (
+                        <div style={{display:"flex", justifyContent:"space-between", alignItems:"flex-start"}}>
+                            <div><h1>{event.title}</h1><p style={{color:"#666"}}>{event.description}</p></div>
                             <div style={{display:"flex", gap:10}}>
-                                <button type="button" onClick={() => setIsEditingEvent(false)} disabled={savingEvent} style={{padding:"10px 20px", background:"#cbd5e0", border:"none", borderRadius:4, cursor:"pointer"}}>Batal</button>
-                                <button type="submit" disabled={savingEvent} style={{padding:"10px 20px", background:"#2f855a", color:"white", border:"none", borderRadius:4, cursor:"pointer"}}>Simpan</button>
+                                <button onClick={()=>{setEditEventForm(event); setIsEditingEvent(true)}} style={btnSecondaryStyle}>✏️ Edit Event</button>
+                                <button onClick={handleDeleteEvent} style={{...btnSecondaryStyle, background:"#fee2e2", color:"#c53030", border:"1px solid #fc8181"}}>🗑 Hapus Event</button>
+                            </div>
+                        </div>
+                    ) : (
+                        <form onSubmit={handleUpdateEvent} style={{display:"flex", flexDirection:"column", gap:10}}>
+                            <input value={editEventForm.title} onChange={e=>setEditEventForm({...editEventForm, title:e.target.value})} style={{padding:8, width:"100%"}} />
+                            <textarea value={editEventForm.description} onChange={e=>setEditEventForm({...editEventForm, description:e.target.value})} rows="4" style={{padding:8, width:"100%"}} />
+                            <div style={{display:"flex", gap:10}}>
+                                <button type="button" onClick={()=>setIsEditingEvent(false)} style={btnSecondaryStyle}>Batal</button>
+                                <button type="submit" style={btnPrimaryStyle}>Simpan</button>
                             </div>
                         </form>
-                    </div>
-                )}
+                    )}
+                </div>
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 30 }}>
-                {/* FORM CREATE SESSION */}
+                {/* CREATE SESSION */}
                 <div style={{ background: "#f8fff9", padding: 20, borderRadius: 8, border: "1px solid #c6f6d5", height: "fit-content" }}>
-                    <h3 style={{marginTop:0, color:"#2f855a"}}>➕ Tambah Sesi</h3>
+                    <h3>➕ Tambah Sesi</h3>
                     <form onSubmit={handleCreateSession} style={{display:"flex", flexDirection:"column", gap:10}}>
-                        <input type="text" placeholder="Judul Sesi" required value={newSession.title} onChange={e=>setNewSession({...newSession, title:e.target.value})} style={{padding:10, border:"1px solid #ddd", borderRadius:4}}/>
-                        <textarea placeholder="Deskripsi Singkat" value={newSession.description} onChange={e=>setNewSession({...newSession, description:e.target.value})} style={{padding:10, border:"1px solid #ddd", borderRadius:4}}/>
-                        <input type="number" placeholder="Harga (Rp)" value={newSession.price} onChange={e=>setNewSession({...newSession, price:parseInt(e.target.value)})} style={{padding:10, border:"1px solid #ddd", borderRadius:4}}/>
-                        <button type="submit" style={{padding:10, background:"#38a169", color:"white", border:"none", borderRadius:4, fontWeight:"bold", cursor:"pointer"}}>Simpan Sesi</button>
+                        <input placeholder="Judul Sesi" value={newSession.title} onChange={e=>setNewSession({...newSession, title:e.target.value})} style={{padding:8}} required />
+                        <textarea placeholder="Deskripsi Sesi" value={newSession.description} onChange={e=>setNewSession({...newSession, description:e.target.value})} style={{padding:8}} />
+                        <input type="number" placeholder="Harga (0 = Gratis)" value={newSession.price} onChange={e=>setNewSession({...newSession, price:parseInt(e.target.value)})} style={{padding:8}} />
+                        <button type="submit" style={btnPrimaryStyle}>Simpan Sesi</button>
                     </form>
                 </div>
 
-                {/* LIST SESSION & MATERIAL */}
+                {/* LIST SESSIONS */}
                 <div>
-                    <h2 style={{marginTop:0}}>Daftar Materi & Sesi</h2>
-                    {sessions.length === 0 && <p style={{color:"#888"}}>Belum ada sesi.</p>}
-                    
                     {sessions.map(s => (
-                        <div key={s.id} style={{ border: "1px solid #e2e8f0", padding: 20, marginBottom: 15, borderRadius: 8, background: "white", boxShadow:"0 2px 4px rgba(0,0,0,0.02)" }}>
-                            {editingSessionId === s.id ? (
+                        <div key={s.id} style={{ border: "1px solid #e2e8f0", padding: 20, marginBottom: 15, borderRadius: 8 }}>
+                            {editSessionId === s.id ? (
                                 <div style={{background:"#fffaf0", padding:15, borderRadius:6, border:"1px dashed #ed8936"}}>
                                     <h4 style={{marginTop:0, color:"#c05621"}}>📝 Edit Sesi</h4>
-                                    <form onSubmit={handleUpdateSessionSubmit} style={{display:"flex", flexDirection:"column", gap:10}}>
-                                        <input type="text" value={editSessionForm.title} onChange={e => setEditSessionForm({...editSessionForm, title: e.target.value})} style={{padding:8, borderRadius:4, border:"1px solid #ccc"}} />
-                                        <textarea value={editSessionForm.description} onChange={e => setEditSessionForm({...editSessionForm, description: e.target.value})} style={{padding:8, borderRadius:4, border:"1px solid #ccc"}} />
-                                        <input type="number" value={editSessionForm.price} onChange={e => setEditSessionForm({...editSessionForm, price: parseInt(e.target.value)})} style={{padding:8, borderRadius:4, border:"1px solid #ccc"}} />
-                                        <div style={{display:"flex", gap:10}}>
-                                            <button type="button" onClick={() => setEditingSessionId(null)} style={{flex:1, padding:8, background:"#cbd5e0", border:"none", borderRadius:4}}>Batal</button>
-                                            <button type="submit" disabled={savingSession} style={{flex:1, padding:8, background:"#ed8936", color:"white", border:"none", borderRadius:4}}>Simpan</button>
+                                    <form onSubmit={handleUpdateSession} style={{display:"flex", flexDirection:"column", gap:10}}>
+                                        <div><label style={{fontWeight:"bold", fontSize:"0.9em"}}>Judul</label><input type="text" value={editSessionForm.title} onChange={e => setEditSessionForm({...editSessionForm, title: e.target.value})} style={{width:"100%", padding:8, borderRadius:4, border:"1px solid #ccc"}} /></div>
+                                        <div><label style={{fontWeight:"bold", fontSize:"0.9em"}}>Deskripsi</label><textarea value={editSessionForm.description} onChange={e => setEditSessionForm({...editSessionForm, description: e.target.value})} rows="3" style={{width:"100%", padding:8, borderRadius:4, border:"1px solid #ccc"}} /></div>
+                                        <div><label style={{fontWeight:"bold", fontSize:"0.9em"}}>Harga</label><input type="number" value={editSessionForm.price} onChange={e => setEditSessionForm({...editSessionForm, price: parseInt(e.target.value)})} style={{width:"100%", padding:8, borderRadius:4, border:"1px solid #ccc"}} /></div>
+                                        <div style={{display:"flex", gap:10, marginTop:10}}>
+                                            <button type="button" onClick={() => setEditSessionId(null)} style={{flex:1, padding:8, background:"#cbd5e0", border:"none", borderRadius:4}}>Batal</button>
+                                            <button type="submit" style={{flex:1, padding:8, background:"#ed8936", color:"white", border:"none", borderRadius:4}}>Simpan</button>
+                                            <button type="button" onClick={() => handleDeleteSession(s.id)} style={{flex:1, padding:8, background:"#fee2e2", color:"#c53030", border:"1px solid #fc8181", borderRadius:4}}>🗑 Hapus Sesi</button>
                                         </div>
                                     </form>
                                 </div>
                             ) : (
-                                <div>
-                                    <div style={{display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:15}}>
-                                        <div><h3 style={{margin:0}}>📂 {s.title}</h3><span style={{fontSize:"0.85em", background:"#eee", padding:"2px 6px", borderRadius:4, color:"#555"}}>Rp {s.price.toLocaleString()}</span></div>
-                                        <div style={{display:"flex", gap:5}}>
-                                            <button onClick={() => handleEditSessionClick(s)} style={{fontSize:"0.85em", cursor:"pointer", padding:"5px 10px", borderRadius:4, border:"1px solid #3182ce", background:"white", color:"#3182ce"}}>✏️ Edit</button>
-                                            <button onClick={() => openModal('Sesi', s)} style={{fontSize:"0.85em", cursor:"pointer", padding:"5px 10px", borderRadius:4, border:"1px solid #ddd", background:"#f7fafc"}}>Status: <b>{s.publish_status || 'DRAFT'}</b> ⚙️</button>
-                                        </div>
-                                    </div>
-                                    <p style={{color:"#666", fontSize:"0.9em", borderBottom:"1px solid #eee", paddingBottom:10}}>{s.description || "Tidak ada deskripsi"}</p>
-                                    
-                                    {/* --- LIST MATERI (YANG SEBELUMNYA HILANG) --- */}
-                                    {((s.videos && s.videos.length > 0) || (s.files && s.files.length > 0)) && (
-                                        <div style={{marginTop: 15, padding: "10px", background: "#f8f9fa", borderRadius: 6, border: "1px solid #e9ecef"}}>
-                                            {s.videos?.length > 0 && (
-                                                <div style={{marginBottom: 10}}>
-                                                    <b style={{fontSize:"0.85em", color:"#2b6cb0", display:"block", marginBottom:5}}>🎥 Video Terupload:</b>
-                                                    <ul style={{listStyle:"none", padding:0, margin:0}}>
-                                                        {s.videos.map(v => (
-                                                            <li key={v.id} style={{display:"flex", alignItems:"center", gap:10, marginBottom:5, fontSize:"0.9em", background:"white", padding:"5px 10px", borderRadius:4, border:"1px solid #eee"}}>
-                                                                <span style={{flex:1}}>📺 {v.title}</span>
-                                                                <a href={`http://localhost:8080/${v.video_url}`} target="_blank" rel="noopener noreferrer" style={{textDecoration:"none", color:"white", background:"#3182ce", padding:"2px 8px", borderRadius:4, fontSize:"0.8em"}}>▶ Putar</a>
-                                                            </li>
-                                                        ))}
-                                                    </ul>
-                                                </div>
-                                            )}
-                                            {s.files?.length > 0 && (
-                                                <div>
-                                                    <b style={{fontSize:"0.85em", color:"#c05621", display:"block", marginBottom:5}}>📄 Modul Terupload:</b>
-                                                    <ul style={{listStyle:"none", padding:0, margin:0}}>
-                                                        {s.files.map(f => (
-                                                            <li key={f.id} style={{display:"flex", alignItems:"center", gap:10, marginBottom:5, fontSize:"0.9em", background:"white", padding:"5px 10px", borderRadius:4, border:"1px solid #eee"}}>
-                                                                <span style={{flex:1}}>📑 {f.title}</span>
-                                                                <a href={`http://localhost:8080/${f.file_url}`} target="_blank" rel="noopener noreferrer" style={{textDecoration:"none", color:"white", background:"#dd6b20", padding:"2px 8px", borderRadius:4, fontSize:"0.8em"}}>⬇ Download</a>
-                                                            </li>
-                                                        ))}
-                                                    </ul>
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-
-                                    <div style={{display:"flex", gap:15, marginTop:15}}>
-                                        <div style={{flex:1, background:"#ebf8ff", padding:15, borderRadius:6, border:"1px dashed #4299e1"}}>
-                                            <h4 style={{marginTop:0, fontSize:"0.9em", color:"#2b6cb0"}}>📹 Upload Video</h4>
-                                            <input type="file" id={`vid-${s.id}`} style={{fontSize:"0.8em", marginBottom:10, width:"100%"}} />
-                                            <button onClick={() => handleUpload('video', s.id, document.getElementById(`vid-${s.id}`))} disabled={uploadingId===`video-${s.id}`} style={{background:"#3182ce", color:"white", border:"none", padding:"6px 12px", borderRadius:4, cursor:"pointer", fontSize:"0.9em"}}>{uploadingId===`video-${s.id}` ? "Uploading..." : "Upload Video"}</button>
-                                        </div>
-                                        <div style={{flex:1, background:"#fffaf0", padding:15, borderRadius:6, border:"1px dashed #dd6b20"}}>
-                                            <h4 style={{marginTop:0, fontSize:"0.9em", color:"#c05621"}}>📄 Upload Modul</h4>
-                                            <input type="file" id={`file-${s.id}`} style={{fontSize:"0.8em", marginBottom:10, width:"100%"}} />
-                                            <button onClick={() => handleUpload('file', s.id, document.getElementById(`file-${s.id}`))} disabled={uploadingId===`file-${s.id}`} style={{background:"#dd6b20", color:"white", border:"none", padding:"6px 12px", borderRadius:4, cursor:"pointer", fontSize:"0.9em"}}>{uploadingId===`file-${s.id}` ? "Uploading..." : "Upload File"}</button>
+                                <div style={{display:"flex", justifyContent:"space-between", marginBottom:15, alignItems:"flex-start"}}>
+                                    <div><h3 style={{margin:0}}>📂 {s.title}</h3><p style={{margin:"5px 0", color:"#666", fontSize:"0.9em"}}>{s.description || "Tidak ada deskripsi"}</p><span style={{fontSize:"0.8em", background:"#eee", padding:"2px 6px", borderRadius:4}}>Rp {s.price.toLocaleString()}</span></div>
+                                    <div style={{display:"flex", gap:5, flexDirection:"column", alignItems:"flex-end"}}>
+                                        <button onClick={() => handleEditSessionClick(s)} style={{fontSize:"0.8em", cursor:"pointer", border:"1px solid #ccc", background:"white", padding:"4px 8px", borderRadius:4}}>⚙️ Edit Sesi</button>
+                                        <div style={{display:"flex", gap:5, marginTop:5}}>
+                                            <button onClick={()=>{setUploadModal({isOpen:true, type:'video', sessionId:s.id})}} style={{cursor:"pointer", background:"#ebf8ff", border:"1px solid #bee3f8", padding:"5px 10px", borderRadius:4, fontSize:"0.85em"}}>➕ Video</button>
+                                            <button onClick={()=>{setUploadModal({isOpen:true, type:'file', sessionId:s.id})}} style={{cursor:"pointer", background:"#fffaf0", border:"1px solid #feebc8", padding:"5px 10px", borderRadius:4, fontSize:"0.85em"}}>➕ File</button>
                                         </div>
                                     </div>
                                 </div>
                             )}
+                            <div style={{background:"#f9fafb", padding:10, borderRadius:6, marginTop:10}}>
+                                {s.videos?.map(v => (
+                                    <div key={v.id} style={{marginBottom:10}}>
+                                        <MaterialItem 
+                                            item={v} type="video" 
+                                            onEdit={(item, type) => openUpdateModal(item, type, s.id)} 
+                                            onDelete={(item, type) => handleDeleteMaterial(item, type, s.id)}
+                                        />
+                                    </div>
+                                ))}
+                                {s.files?.map(f => (
+                                    <div key={f.id} style={{marginBottom:10}}>
+                                        <MaterialItem 
+                                            item={f} type="file" 
+                                            onEdit={(item, type) => openUpdateModal(item, type, s.id)} 
+                                            onDelete={(item, type) => handleDeleteMaterial(item, type, s.id)}
+                                        />
+                                    </div>
+                                ))}
+                                {(!s.videos?.length && !s.files?.length) && <p style={{color:"#aaa", fontSize:"0.9em", textAlign:"center"}}>Belum ada materi.</p>}
+                            </div>
                         </div>
                     ))}
                 </div>
@@ -404,3 +406,10 @@ export default function ManageEvent() {
         </div>
     );
 }
+
+// STYLES
+const modalOverlayStyle = { position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.5)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 9999 };
+const modalContentStyle = { background: "white", padding: "25px", borderRadius: "8px", width: "450px", maxWidth: "90%", boxShadow: "0 4px 15px rgba(0,0,0,0.3)" };
+const radioLabelStyle = { display: "flex", gap: "10px", padding: "10px", border: "1px solid #ddd", borderRadius: "5px", cursor:"pointer" };
+const btnPrimaryStyle = { background: "#3182ce", color: "white", padding: "8px 15px", border: "none", borderRadius: "4px", cursor: "pointer", fontWeight:"bold" };
+const btnSecondaryStyle = { padding: "8px 15px", border: "none", background: "#cbd5e0", borderRadius: "4px", cursor: "pointer" };

@@ -279,3 +279,89 @@ func CreateSession(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Session created!", "session_id": sessionID})
 }
 
+// // ==========================================
+// // STRUCT KHUSUS UNTUK RESPONSE DASHBOARD
+// // ==========================================
+// type SessionVideoResponse struct {
+// 	ID       int64  `db:"id" json:"id"`
+// 	Title    string `db:"title" json:"title"`
+// 	VideoURL string `db:"video_url" json:"video_url"`
+// }
+
+// type SessionFileResponse struct {
+// 	ID      int64  `db:"id" json:"id"`
+// 	Title   string `db:"title" json:"title"`
+// 	FileURL string `db:"file_url" json:"file_url"`
+// }
+
+// type SessionWithMedia struct {
+// 	ID            int64                  `db:"id" json:"id"`
+// 	EventID       int64                  `db:"event_id" json:"event_id"`
+// 	Title         string                 `db:"title" json:"title"`
+// 	Description   string                 `db:"description" json:"description"`
+// 	Price         int                    `db:"price" json:"price"`
+// 	PublishStatus string                 `db:"publish_status" json:"publish_status"`
+// 	Videos        []SessionVideoResponse `json:"videos"`
+// 	Files         []SessionFileResponse  `json:"files"`
+// }
+
+// // ==========================================
+// // GET EVENT DETAIL (FOR MANAGE - ORGANIZER)
+// // ==========================================
+// func GetMyEventDetailForManage(c *gin.Context) {
+// 	eventIDStr := c.Param("eventID")
+// 	if eventIDStr == "" {
+// 		eventIDStr = c.Param("id")
+// 	}
+	
+// 	userID := c.GetInt64("user_id")
+
+// 	// 1. Cek Kepemilikan Event
+// 	var event models.Event
+// 	err := config.DB.Get(&event, `
+// 		SELECT e.* FROM events e
+// 		JOIN organizations o ON e.organization_id = o.id
+// 		WHERE e.id = ? AND o.owner_user_id = ?
+// 	`, eventIDStr, userID)
+
+// 	if err != nil {
+// 		c.JSON(http.StatusNotFound, gin.H{"error": "Event tidak ditemukan atau akses ditolak"})
+// 		return
+// 	}
+
+// 	// 2. Ambil Daftar Sesi
+// 	var sessions []SessionWithMedia
+// 	err = config.DB.Select(&sessions, `
+// 		SELECT id, event_id, title, description, price, publish_status 
+// 		FROM sessions 
+// 		WHERE event_id = ? 
+// 		ORDER BY order_index ASC, created_at ASC
+// 	`, event.ID)
+
+// 	if err != nil {
+// 		// Jika tidak ada sesi, jangan error, tapi return array kosong
+// 		sessions = []SessionWithMedia{}
+// 	}
+
+// 	// 3. Ambil Video dan File untuk SETIAP Sesi
+// 	// (Looping query ini sederhana & cukup cepat untuk jumlah sesi wajar)
+// 	for i := range sessions {
+// 		// Ambil Video
+// 		var videos []SessionVideoResponse
+// 		config.DB.Select(&videos, "SELECT id, title, video_url FROM session_videos WHERE session_id = ? ORDER BY order_index ASC", sessions[i].ID)
+// 		if videos == nil { videos = []SessionVideoResponse{} }
+// 		sessions[i].Videos = videos
+
+// 		// Ambil File
+// 		var files []SessionFileResponse
+// 		config.DB.Select(&files, "SELECT id, title, file_url FROM session_files WHERE session_id = ? ORDER BY order_index ASC", sessions[i].ID)
+// 		if files == nil { files = []SessionFileResponse{} }
+// 		sessions[i].Files = files
+// 	}
+
+// 	// 4. Kirim Response Lengkap
+// 	c.JSON(http.StatusOK, gin.H{
+// 		"event":    event,
+// 		"sessions": sessions,
+// 	})
+// }
