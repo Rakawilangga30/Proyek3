@@ -6,12 +6,17 @@ import Navbar from "./components/Navbar";
 // IMPORT HALAMAN UTAMA
 import Dashboard from "./pages/Dashboard";         
 import EventDetail from "./pages/EventDetail";     
+
+// IMPORT HALAMAN AUTH
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+
+// IMPORT HALAMAN ORGANISASI
 import MyOrganization from "./pages/org/MyOrganization"; 
 import ManageEvent from "./pages/org/ManageEvent"; 
 
-// IMPORT HALAMAN AUTH (YANG BARU DIBUAT)
-import Login from "./pages/Login";       // <--- INI PENTING
-import Register from "./pages/Register"; // <--- INI PENTING
+// IMPORT HALAMAN ADMIN
+import AdminDashboard from "./pages/admin/AdminDashboard"; 
 
 function App() {
   return (
@@ -25,15 +30,18 @@ function App() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/event/:id" element={<EventDetail />} />
 
-          {/* Auth Routes (Login & Register) */}
-          <Route path="/login" element={<Login />} />       {/* <--- Route Login */}
-          <Route path="/register" element={<Register />} /> {/* <--- Route Register */}
+          {/* Auth Routes */}
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
 
           {/* Organization Routes */}
           <Route path="/org" element={<MyOrganization />} /> 
           <Route path="/org/event/:eventID/manage" element={<ManageEvent />} />
 
-          {/* Fallback */}
+          {/* Admin Routes */}
+          <Route path="/admin" element={<AdminDashboard />} />
+
+          {/* Fallback (404) */}
           <Route path="*" element={<div style={{padding:40, textAlign:"center"}}><h2>404 Not Found</h2></div>} />
         </Routes>
       </div>

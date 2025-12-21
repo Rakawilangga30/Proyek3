@@ -1,9 +1,10 @@
 package controllers
 
 import (
-	
+	"fmt" // <-- DITAMBAHKAN: Untuk mengatasi error undefined: fmt
 	"net/http"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -189,9 +190,113 @@ func DeleteEvent(c *gin.Context) {
 	_, err = config.DB.Exec("DELETE FROM events WHERE id = ? AND organization_id = ?", eventID, orgID)
 	
 	if err != nil {
+		fmt.Println("Error delete event:", err) // Menggunakan fmt yang sekarang sudah diimport
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal menghapus event (DB Error): " + err.Error()})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Event dan semua isinya berhasil dihapus"})
+}
+
+// ==========================================
+// UPDATE EVENT (Title, Desc, Category)
+// ==========================================
+type UpdateEventInput struct {
+	Title       string `json:"title"`
+	Description string `json:"description"`
+	Category    string `json:"category"`
+}
+
+func UpdateEvent(c *gin.Context) {
+	eventID := c.Param("eventID")
+	userID := c.GetInt64("user_id")
+
+	orgID, err := getOrganizationIDByUser(userID)
+	if err != nil {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Akses ditolak"})
+		return
+	}
+
+	// Cek kepemilikan
+	var count int
+	config.DB.Get(&count, "SELECT COUNT(*) FROM events WHERE id = ? AND organization_id = ?", eventID, orgID)
+	if count == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Event tidak ditemukan atau bukan milik Anda"})
+		return
+	}
+
+	var input UpdateEventInput
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Update DB
+	_, err = config.DB.Exec(`
+		UPDATE events 
+		SET title = ?, description = ?, category = ?, updated_at = NOW() 
+		WHERE id = ?
+	`, input.Title, input.Description, input.Category, eventID)
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal update event"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Event berhasil diperbarui"})
+}
+
+// ==========================================
+// UPLOAD EVENT THUMBNAIL
+// ==========================================
+func UploadEventThumbnail(c *gin.Context) {
+	eventID := c.Param("eventID")
+	userID := c.GetInt64("user_id")
+
+	orgID, err := getOrganizationIDByUser(userID)
+	if err != nil {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Akses ditolak"})
+		return
+	}
+
+	// Cek kepemilikan
+	var count int
+	config.DB.Get(&count, "SELECT COUNT(*) FROM events WHERE id = ? AND organization_id = ?", eventID, orgID)
+	if count == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Event tidak ditemukan atau bukan milik Anda"})
+		return
+	}
+
+	// Ambil File
+	file, err := c.FormFile("thumbnail")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "File thumbnail wajib diupload"})
+		return
+	}
+
+	// Simpan File
+	saveDir := "uploads/events"
+	os.MkdirAll(saveDir, os.ModePerm)
+
+	ext := filepath.Ext(file.Filename)
+	filename := fmt.Sprintf("event_thumb_%s_%d%s", eventID, time.Now().Unix(), ext)
+	filePath := filepath.Join(saveDir, filename)
+
+	if err := c.SaveUploadedFile(file, filePath); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal menyimpan gambar"})
+		return
+	}
+
+	// Update DB (path separator forward slash untuk URL)
+	dbPath := "uploads/events/" + filename
+	_, err = config.DB.Exec("UPDATE events SET thumbnail_url = ? WHERE id = ?", dbPath, eventID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal update database"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message":       "Thumbnail berhasil diupload",
+		"thumbnail_url": dbPath,
+	})
 }
