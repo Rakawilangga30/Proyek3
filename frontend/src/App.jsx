@@ -17,6 +17,8 @@ import UserList from "./pages/admin/UserList";
 import AdminOrgApprovals from "./pages/admin/AdminOrgApprovals";
 import MyOrganization from "./pages/org/MyOrganization";
 import ManageEvent from "./pages/org/ManageEvent";
+import MyCourses from "./pages/user/MyCourses"; // Kita akan buat file ini nanti
+import OrgEventList from "./pages/org/OrgEventList"; // Kita akan buat file ini nanti
 
 function App() {
   return (
@@ -41,6 +43,8 @@ function App() {
 
           {/* User Routes */}
           <Route path="profile" element={<UserProfile />} />
+         {/* Tambahkan ini agar menu "Kursus Saya" di sidebar jalan */}
+          <Route path="my-courses" element={<div style={{padding:20}}><h2>Halaman Kursus Saya (Todo)</h2></div>} />
 
           {/* Admin Routes */}
           <Route path="admin/users" element={<UserList />} />
@@ -48,7 +52,9 @@ function App() {
 
           {/* Organization Routes */}
           <Route path="org" element={<MyOrganization />} />
+          <Route path="org/events" element={<div style={{padding:20}}><h2>List Event Organisasi (Todo)</h2></div>} />
           <Route path="org/event/:eventID/manage" element={<ManageEvent />} />
+          
 
         </Route>
 

@@ -7,41 +7,58 @@ export default function Login() {
     const [password, setPassword] = useState("");
     const navigate = useNavigate();
 
-    const handleLogin = async (e) => {
-        e.preventDefault();
-        try {
-            const res = await api.post("/login", { email, password });
-            
-            // 1. Simpan Token
-            localStorage.setItem("token", res.data.token);
+    // ... imports
 
-            // 2. Simpan Data User + Roles (PENTING untuk Sidebar)
+        const handleLogin = async (e) => {
+            e.preventDefault();
+            try {
+                const res = await api.post("/login", { email, password });
+                
+                // --- PERBAIKAN DI SINI ---
+                
+                // 1. Ambil raw roles dari backend
+                const rawRoles = res.data.roles || [];
+
+                // 2. Format menjadi Array String Murni dan normalisasi
+                // Kita jaga-jaga: kalau formatnya object kita ambil .name, kalau string ya biarkan string
+                // Normalisasi: uppercase + trim, dan map 'ORGANIZATION' -> 'ORGANIZER'
+                let formattedRoles = rawRoles.map(r => {
+                    if (typeof r === 'object') {
+                        return (r.name || r.Name || "").toString();
+                    }
+                    return String(r || "");
+                })
+                .map(r => r.toUpperCase().trim())
+                .map(r => r === "ORGANIZATION" ? "ORGANIZER" : r);
+
+            // 3. Simpan User + Roles yang sudah bersih
             const userData = {
                 ...res.data.user,
-                roles: res.data.roles || [] 
+                roles: formattedRoles // Simpan versi string, contoh: ["USER", "ORGANIZER"]
             };
+            
+            localStorage.setItem("token", res.data.token);
             localStorage.setItem("user", JSON.stringify(userData));
+                // --- END PERBAIKAN ---
 
-            alert("Login Berhasil!");
+                alert("Login Berhasil!");
 
-            // 3. LOGIC REDIRECT (Perbaikan disini)
-            if (userData.roles.includes("ADMIN")) {
-            navigate("/dashboard/admin/users");
-            } else if (userData.roles.includes("ORGANIZER")) {
-                navigate("/dashboard/org"); // Atau ke /dashboard saja jika mau home
-            } else {
-                navigate("/dashboard"); // <--- Ubah ini dari "/dashboard/profile" menjadi "/dashboard"
+                // Logic Redirect tetap sama...
+                if (formattedRoles.includes("ADMIN")) { // Gunakan formattedRoles untuk cek di sini juga
+                    navigate("/dashboard/admin/users");
+                } else if (formattedRoles.includes("ORGANIZER")) {
+                    navigate("/dashboard/org/events"); // Arahkan ke list event
+                } else {
+                    navigate("/dashboard/my-courses");
+                }
+
+                setTimeout(() => { window.location.reload() }, 100); 
+
+            } catch (error) {
+                console.error(error);
+                alert("Login Gagal: " + (error.response?.data?.error || "Cek Email/Password"));
             }
-
-            // Reload agar Sidebar merender ulang data user
-            // window.location.reload(); (Opsional, navigate biasanya cukup jika state dikelola dengan baik, tapi reload aman)
-            setTimeout(() => { window.location.reload() }, 100); 
-
-        } catch (error) {
-            console.error(error);
-            alert("Login Gagal: " + (error.response?.data?.error || "Cek Email/Password"));
-        }
-    };
+        };
 
     return (
         <div style={{ maxWidth: "400px", margin: "100px auto", padding: "30px", background:"white", border: "1px solid #ddd", borderRadius: "8px", boxShadow: "0 4px 12px rgba(0,0,0,0.1)" }}>
