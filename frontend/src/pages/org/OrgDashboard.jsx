@@ -31,7 +31,7 @@ export default function OrgDashboard() {
         <div style={{ padding: "20px", maxWidth: "1000px", margin: "0 auto" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "30px" }}>
                 <h1>🎓 Dashboard Creator</h1>
-                <Link to="/org/create-event">
+                <Link to="/dashboard/org/create-event">
                     <button style={{ background: "#3182ce", color: "white", padding: "12px 20px", borderRadius: "8px", border: "none", cursor: "pointer", fontWeight: "bold" }}>
                         + Buat Event Baru
                     </button>
@@ -52,7 +52,7 @@ export default function OrgDashboard() {
                                     {ev.category}
                                 </span>
                                 <div style={{ marginTop: "20px", display: "flex", gap: "10px" }}>
-                                    <Link to={`/org/event/${ev.id}/manage`} style={{ flex: 1 }}>
+                                    <Link to={`/dashboard/org/event/${ev.id}/manage`} style={{ flex: 1 }}>
                                         <button style={{ width: "100%", background: "#2c5282", color: "white", padding: "10px", border: "none", borderRadius: "6px", cursor: "pointer" }}>
                                             ⚙️ Kelola Materi
                                         </button>

@@ -244,7 +244,7 @@ export default function ManageEvent() {
 
     const handleDeleteEvent = async () => {
         if (window.confirm("⚠️ PERINGATAN KERAS!\n\nYakin hapus Event ini? SEMUA SESI & MATERI akan hilang permanen!")) {
-            try { await api.delete(`/organization/events/${event.id}`); alert("Event dihapus."); navigate("/org"); } 
+            try { await api.delete(`/organization/events/${event.id}`); alert("Event dihapus."); navigate("/dashboard/org"); } 
             catch (error) { alert("Gagal menghapus event"); }
         }
     };
@@ -333,7 +333,7 @@ export default function ManageEvent() {
             <UpdateMaterialModal isOpen={updateModal.isOpen} config={updateModal} onClose={() => setUpdateModal({...updateModal, isOpen: false})} onSave={handleUpdateMaterialSubmit} />
 
             <div style={{marginBottom:30, paddingBottom:20, borderBottom:"1px solid #eee"}}>
-                <Link to="/org" style={{textDecoration:"none", color:"#555"}}>⬅️ Kembali</Link>
+                <Link to="/dashboard/org" style={{textDecoration:"none", color:"#555"}}>⬅️ Kembali</Link>
                 <div style={{marginTop: 20, marginBottom: 20, position: "relative", width: "100%", height: "250px", background: "#f0f0f0", borderRadius: "8px", overflow: "hidden", border: "1px dashed #ccc"}}>
                     {event.thumbnail_url ? (
                         <img src={`http://localhost:8080/${event.thumbnail_url}`} alt="Event Cover" style={{width: "100%", height: "100%", objectFit: "cover"}} onError={(e) => { e.target.onerror = null; e.target.src="https://via.placeholder.com/800x250?text=Error+Loading+Image"; }} />

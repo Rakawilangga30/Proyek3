@@ -50,7 +50,7 @@ export default function Sidebar() {
           <>
             <p style={{ padding: "20px 20px 5px", fontSize: "0.75rem", color: "#718096", textTransform: "uppercase", letterSpacing: "1px" }}>Creator Area</p>
             <MenuItem to="/dashboard/org" label="Dashboard Org" icon="🏢" />
-            <MenuItem to="/dashboard/org/events" label="Kelola Event" icon="📅" />
+            <MenuItem to="/dashboard/org/events" label="Report" icon="📊" />
           </>
         )}
 

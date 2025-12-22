@@ -17,6 +17,7 @@ import UserList from "./pages/admin/UserList";
 import AdminOrgApprovals from "./pages/admin/AdminOrgApprovals";
 import MyOrganization from "./pages/org/MyOrganization";
 import ManageEvent from "./pages/org/ManageEvent";
+import CreateEvent from "./pages/org/CreateEvent";
 import MyCourses from "./pages/user/MyCourses"; // Kita akan buat file ini nanti
 import OrgEventList from "./pages/org/OrgEventList"; // Kita akan buat file ini nanti
 
@@ -52,7 +53,8 @@ function App() {
 
           {/* Organization Routes */}
           <Route path="org" element={<MyOrganization />} />
-          <Route path="org/events" element={<div style={{padding:20}}><h2>List Event Organisasi (Todo)</h2></div>} />
+          <Route path="org/events" element={<OrgEventList />} />
+          <Route path="org/create-event" element={<CreateEvent />} />
           <Route path="org/event/:eventID/manage" element={<ManageEvent />} />
           
 

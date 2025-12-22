@@ -3,8 +3,9 @@ package controllers
 import (
 	"strconv"
 
-	"github.com/gin-gonic/gin"
 	"BACKEND/config"
+
+	"github.com/gin-gonic/gin"
 )
 
 // =============================
@@ -65,7 +66,7 @@ func BuySession(c *gin.Context) {
 	}
 
 	c.JSON(200, gin.H{
-		"message": "Purchase successful",
+		"message":    "Purchase successful",
 		"session_id": sessionID,
 		"price_paid": price,
 	})
@@ -79,16 +80,22 @@ func MyPurchases(c *gin.Context) {
 	userID := c.GetInt64("user_id")
 
 	var purchases []struct {
-		PurchaseID int64   `db:"id" json:"id"`
-		SessionID  int64   `db:"session_id" json:"session_id"`
-		Title      string  `db:"title" json:"title"`
-		PricePaid  float64 `db:"price_paid" json:"price_paid"`
+		PurchaseID   int64   `db:"id" json:"id"`
+		SessionID    int64   `db:"session_id" json:"session_id"`
+		SessionTitle string  `db:"session_title" json:"session_title"`
+		PricePaid    float64 `db:"price_paid" json:"price_paid"`
+		EventID      int64   `db:"event_id" json:"event_id"`
+		EventTitle   string  `db:"event_title" json:"event_title"`
+		EventThumb   *string `db:"thumbnail_url" json:"thumbnail_url"`
 	}
 
+	// Return purchases with session + event info so frontend dapat menampilkan grouped view
 	err := config.DB.Select(&purchases, `
-		SELECT p.id, p.session_id, s.title, p.price_paid
+		SELECT p.id, p.session_id, s.title as session_title, p.price_paid,
+			   e.id as event_id, e.title as event_title, e.thumbnail_url
 		FROM purchases p
 		JOIN sessions s ON p.session_id = s.id
+		JOIN events e ON s.event_id = e.id
 		WHERE p.user_id = ?
 		ORDER BY p.purchased_at DESC
 	`, userID)

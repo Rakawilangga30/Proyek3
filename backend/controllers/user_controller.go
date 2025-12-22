@@ -10,16 +10,28 @@ import (
 	"BACKEND/models"
 )
 
-
 // ================================
 // GET PROFILE USER SENDIRI
 // ================================
 func GetMe(c *gin.Context) {
-	userID := c.GetInt64("user_id")
+	// Read user_id from context robustly (support int/int64/float64)
+	var userID int64
+	if v, ok := c.Get("user_id"); ok {
+		switch t := v.(type) {
+		case int64:
+			userID = t
+		case int:
+			userID = int64(t)
+		case float64:
+			userID = int64(t)
+		default:
+			userID = 0
+		}
+	}
 
 	var user models.User
 	err := config.DB.Get(&user,
-		`SELECT id, name, email, phone, profile_img, bio 
+		`SELECT id, name, email, phone, profile_img, bio, COALESCE(username, '') as username
 		 FROM users WHERE id = ?`,
 		userID,
 	)
@@ -32,7 +44,6 @@ func GetMe(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"user": user})
 }
 
-
 // ================================
 // UPDATE PROFILE USER SENDIRI
 // ================================
@@ -41,6 +52,7 @@ type UpdateMeRequest struct {
 	Phone      string `json:"phone"`
 	ProfileImg string `json:"profile_img"`
 	Bio        string `json:"bio"`
+	Username   string `json:"username"`
 }
 
 func UpdateMe(c *gin.Context) {
@@ -54,10 +66,10 @@ func UpdateMe(c *gin.Context) {
 
 	_, err := config.DB.Exec(`
 		UPDATE users 
-		SET name = ?, phone = ?, profile_img = ?, bio = ?
+		SET name = ?, phone = ?, profile_img = ?, bio = ?, username = ?
 		WHERE id = ?
 	`,
-		req.Name, req.Phone, req.ProfileImg, req.Bio, userID,
+		req.Name, req.Phone, req.ProfileImg, req.Bio, req.Username, userID,
 	)
 
 	if err != nil {
@@ -68,63 +80,61 @@ func UpdateMe(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Profile updated successfully"})
 }
 
-
 // ================================
 // ADMIN: GET ALL USERS (WITH ROLES)
 // ================================
 func GetAllUsers(c *gin.Context) {
-    // Kita buat struct custom untuk response agar ada field Roles
-    type UserWithRole struct {
-        models.User
-        Roles []string `json:"roles"`
-    }
+	// Kita buat struct custom untuk response agar ada field Roles
+	type UserWithRole struct {
+		models.User
+		Roles []string `json:"roles"`
+	}
 
-    // 1. Ambil semua user
-    var users []models.User
-    err := config.DB.Select(&users, `
+	// 1. Ambil semua user
+	var users []models.User
+	err := config.DB.Select(&users, `
         SELECT id, name, email, phone, profile_img, bio 
         FROM users ORDER BY id DESC
     `)
 
-    if err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch users"})
-        return
-    }
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch users"})
+		return
+	}
 
-    // 2. Ambil semua roles mapping (agar efisien, sekali query)
-    type UserRoleMap struct {
-        UserID   int64  `db:"user_id"`
-        RoleName string `db:"role_name"`
-    }
-    var roleMaps []UserRoleMap
-    config.DB.Select(&roleMaps, `
+	// 2. Ambil semua roles mapping (agar efisien, sekali query)
+	type UserRoleMap struct {
+		UserID   int64  `db:"user_id"`
+		RoleName string `db:"role_name"`
+	}
+	var roleMaps []UserRoleMap
+	config.DB.Select(&roleMaps, `
         SELECT ur.user_id, r.name as role_name
         FROM user_roles ur
         JOIN roles r ON ur.role_id = r.id
     `)
 
-    // 3. Gabungkan data User + Role
-    var result []UserWithRole
-    
-    for _, u := range users {
-        // Cari role untuk user ini
-        var myRoles []string
-        for _, rm := range roleMaps {
-            if rm.UserID == u.ID {
-                myRoles = append(myRoles, rm.RoleName)
-            }
-        }
-        
-        // Append ke hasil akhir
-        result = append(result, UserWithRole{
-            User:  u,
-            Roles: myRoles,
-        })
-    }
+	// 3. Gabungkan data User + Role
+	var result []UserWithRole
 
-    c.JSON(http.StatusOK, gin.H{"users": result})
+	for _, u := range users {
+		// Cari role untuk user ini
+		var myRoles []string
+		for _, rm := range roleMaps {
+			if rm.UserID == u.ID {
+				myRoles = append(myRoles, rm.RoleName)
+			}
+		}
+
+		// Append ke hasil akhir
+		result = append(result, UserWithRole{
+			User:  u,
+			Roles: myRoles,
+		})
+	}
+
+	c.JSON(http.StatusOK, gin.H{"users": result})
 }
-
 
 // ================================
 // ADMIN: GET USER BY ID
@@ -146,7 +156,6 @@ func GetUserByID(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"user": user})
 }
-
 
 // ================================
 // ADMIN: UPDATE USER
@@ -181,7 +190,6 @@ func UpdateUserByAdmin(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "User updated successfully"})
 }
 
-
 // ================================
 // ADMIN: DELETE USER
 // ================================
@@ -199,7 +207,6 @@ func DeleteUser(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "User deleted successfully"})
 }
-
 
 // ================================
 // ADMIN: CREATE NEW USER

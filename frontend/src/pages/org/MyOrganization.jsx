@@ -133,7 +133,7 @@ export default function MyOrganization() {
                                     </span>
                                 </div>
                             </div>
-                            <Link to={`/org/event/${evt.id}/manage`} style={{ background: "#2b6cb0", color: "white", textDecoration: "none", padding: "10px 20px", borderRadius: "5px", fontWeight: "bold" }}>
+                            <Link to={`/dashboard/org/event/${evt.id}/manage`} style={{ background: "#2b6cb0", color: "white", textDecoration: "none", padding: "10px 20px", borderRadius: "5px", fontWeight: "bold" }}>
                                 ⚙️ Kelola Materi
                             </Link>
                         </div>

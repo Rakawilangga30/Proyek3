@@ -3,8 +3,8 @@ package models
 import "time"
 
 type Organization struct {
-	ID           int64     `db:"id" json:"id"`
-	OwnerUserID  int64     `db:"owner_user_id" json:"owner_user_id"`
+	ID          int64 `db:"id" json:"id"`
+	OwnerUserID int64 `db:"owner_user_id" json:"owner_user_id"`
 
 	Name        string `db:"name" json:"name"`
 	Description string `db:"description" json:"description"`
@@ -14,6 +14,9 @@ type Organization struct {
 	Email   string `db:"email" json:"email"`
 	Phone   string `db:"phone" json:"phone"`
 	Website string `db:"website" json:"website"`
+
+	SocialLink string `db:"social_link" json:"social_link"`
+	Address    string `db:"address" json:"address"`
 
 	CreatedAt time.Time `db:"created_at" json:"created_at"`
 }

@@ -19,7 +19,7 @@ func RegisterRoutes(r *gin.Engine) {
 		api.POST("/login", controllers.Login)
 		api.GET("/events", controllers.ListPublicEvents)
 		api.GET("/events/:eventID", controllers.GetEventDetail)
-		
+
 		// Note: Pindahkan route public session ke sini agar rapi
 		api.GET("/user/sessions/video/:filename", controllers.StreamSessionVideo)
 		api.GET("/user/sessions/file/:filename", controllers.StreamSessionFile)
@@ -30,7 +30,7 @@ func RegisterRoutes(r *gin.Engine) {
 	// ==========================================
 	// Gunakan variabel nama berbeda agar tidak konflik/membingungkan
 	userGroup := api.Group("/user")
-	userGroup.Use(middlewares.AuthRequired()) 
+	userGroup.Use(middlewares.AuthRequired())
 	{
 		userGroup.GET("/profile", controllers.GetMe)
 		userGroup.PUT("/profile", controllers.UpdateMe)
@@ -66,6 +66,7 @@ func RegisterRoutes(r *gin.Engine) {
 	{
 		org.GET("/profile", controllers.GetOrganizationProfile)
 		org.PUT("/profile", controllers.UpdateOrganizationProfile)
+		org.GET("/report", controllers.GetOrganizationReport)
 
 		org.POST("/events", controllers.CreateEvent)
 		org.PUT("/events/:eventID", controllers.UpdateEvent)
@@ -73,7 +74,7 @@ func RegisterRoutes(r *gin.Engine) {
 
 		org.POST("/events/:eventID/thumbnail", controllers.UploadEventThumbnail)
 		org.GET("/events", controllers.ListMyEvents)
-		org.GET("/events/:eventID", controllers.GetMyEventDetailForManage) 
+		org.GET("/events/:eventID", controllers.GetMyEventDetailForManage)
 
 		org.PUT("/events/:eventID/publish", controllers.PublishEvent)
 		org.PUT("/events/:eventID/unpublish", controllers.UnpublishEvent)

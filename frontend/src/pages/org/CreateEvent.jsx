@@ -40,7 +40,7 @@ export default function CreateEvent() {
 
             alert("✅ Event Berhasil Dibuat!");
             // Arahkan ke halaman Manage Event yang baru dibuat
-            navigate(`/org/event/${newEventId}/manage`);
+            navigate(`/dashboard/org/event/${newEventId}/manage`);
         } catch (error) {
             console.error(error);
             alert("Gagal: " + (error.response?.data?.error || "Terjadi kesalahan sistem"));
