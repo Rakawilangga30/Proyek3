@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import api from "../../api"; // Pastikan path ini sesuai dengan struktur folder Anda
+import api from "../../api";
 
 export default function UserList() {
     const [users, setUsers] = useState([]);
@@ -10,18 +10,16 @@ export default function UserList() {
         fetchUsers();
     }, []);
 
-    // Helper untuk URL gambar (handle path relatif dari backend)
     const getImgUrl = (path) => {
         if (!path) return null;
         if (path.startsWith("http")) return path;
-        return `http://localhost:8080/${path}`; // Sesuaikan dengan port backend Anda
+        return `http://localhost:8080/${path}`;
     };
 
     const fetchUsers = async () => {
         setLoading(true);
         setError(null);
         try {
-            // Mengambil data user dari endpoint Admin
             const res = await api.get("/admin/users");
             setUsers(res.data.users || []);
         } catch (err) {
@@ -34,10 +32,9 @@ export default function UserList() {
 
     const handleDelete = async (id) => {
         if (!window.confirm("Yakin ingin menghapus user ini? Aksi ini tidak dapat dibatalkan.")) return;
-        
+
         try {
             await api.delete(`/admin/users/${id}`);
-            // Update state lokal agar tidak perlu refresh halaman
             setUsers(users.filter(u => u.id !== id));
             alert("User berhasil dihapus.");
         } catch (err) {
@@ -47,134 +44,238 @@ export default function UserList() {
     };
 
     return (
-        <div style={{ background: "white", padding: 25, borderRadius: 8, boxShadow: "0 2px 4px rgba(0,0,0,0.1)" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-                <h2 style={{ margin: 0, color: "#2d3748" }}>👥 Manajemen User</h2>
-                <button 
-                    onClick={fetchUsers} 
-                    style={{ padding: "8px 12px", background: "#edf2f7", border: "none", borderRadius: 4, cursor: "pointer", fontSize: 14 }}
+        <div>
+            {/* Header */}
+            <div style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: "24px"
+            }}>
+                <div>
+                    <h2 style={{ margin: "0 0 4px 0", color: "#1e293b", fontSize: "1.5rem" }}>
+                        👥 Manajemen User
+                    </h2>
+                    <p style={{ margin: 0, color: "#64748b", fontSize: "0.9rem" }}>
+                        Kelola semua pengguna terdaftar
+                    </p>
+                </div>
+                <button
+                    onClick={fetchUsers}
+                    style={{
+                        padding: "10px 16px",
+                        background: "white",
+                        border: "1px solid #e2e8f0",
+                        borderRadius: "8px",
+                        cursor: "pointer",
+                        fontSize: "0.9rem",
+                        fontWeight: "500",
+                        color: "#374151",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        transition: "all 0.2s ease"
+                    }}
                 >
                     🔄 Refresh
                 </button>
             </div>
 
+            {/* Error Alert */}
             {error && (
-                <div style={{ background: "#fff5f5", color: "#c53030", padding: 15, borderRadius: 6, marginBottom: 20 }}>
-                    {error}
+                <div style={{
+                    background: "#fef2f2",
+                    color: "#dc2626",
+                    padding: "16px",
+                    borderRadius: "8px",
+                    marginBottom: "20px",
+                    border: "1px solid #fecaca",
+                    fontSize: "0.9rem"
+                }}>
+                    ⚠️ {error}
                 </div>
             )}
 
-            {loading ? (
-                <p style={{ textAlign: "center", color: "#718096" }}>⏳ Memuat data user...</p>
-            ) : (
-                <div style={{ overflowX: "auto" }}>
-                    <table style={{ width: "100%", borderCollapse: "collapse", minWidth: "600px" }}>
-                        <thead>
-                            <tr style={{ background: "#f7fafc", textAlign: "left" }}>
-                                <th style={{ padding: "12px 15px", borderBottom: "2px solid #edf2f7", color: "#4a5568" }}>ID</th>
-                                <th style={{ padding: "12px 15px", borderBottom: "2px solid #edf2f7", color: "#4a5568" }}>User Info</th>
-                                <th style={{ padding: "12px 15px", borderBottom: "2px solid #edf2f7", color: "#4a5568" }}>Email</th>
-                                <th style={{ padding: "12px 15px", borderBottom: "2px solid #edf2f7", color: "#4a5568" }}>Role</th>
-                                <th style={{ padding: "12px 15px", borderBottom: "2px solid #edf2f7", color: "#4a5568", textAlign: "center" }}>Aksi</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {users.length === 0 ? (
-                                <tr>
-                                    <td colSpan="5" style={{ padding: 20, textAlign: "center", color: "#718096" }}>
-                                        Tidak ada data user.
-                                    </td>
+            {/* Table Card */}
+            <div style={{
+                background: "white",
+                borderRadius: "12px",
+                boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+                overflow: "hidden"
+            }}>
+                {loading ? (
+                    <div style={{ padding: "40px", textAlign: "center", color: "#64748b" }}>
+                        <div style={{
+                            width: "32px",
+                            height: "32px",
+                            border: "3px solid #e2e8f0",
+                            borderTopColor: "#3b82f6",
+                            borderRadius: "50%",
+                            animation: "spin 1s linear infinite",
+                            margin: "0 auto 12px"
+                        }}></div>
+                        Memuat data user...
+                    </div>
+                ) : (
+                    <div style={{ overflowX: "auto" }}>
+                        <table style={{ width: "100%", borderCollapse: "collapse", minWidth: "700px" }}>
+                            <thead>
+                                <tr style={{ background: "#f8fafc" }}>
+                                    <th style={thStyle}>ID</th>
+                                    <th style={thStyle}>User Info</th>
+                                    <th style={thStyle}>Email</th>
+                                    <th style={thStyle}>Role</th>
+                                    <th style={{ ...thStyle, textAlign: "center" }}>Aksi</th>
                                 </tr>
-                            ) : (
-                                users.map(u => (
-                                    <tr key={u.id} style={{ borderBottom: "1px solid #edf2f7", transition: "0.2s" }}>
-                                        <td style={{ padding: 15, verticalAlign: "top" }}>#{u.id}</td>
-                                        
-                                        {/* Kolom Nama + Foto */}
-                                        <td style={{ padding: 15, verticalAlign: "top" }}>
-                                            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                                                <div style={{ width: 40, height: 40, borderRadius: "50%", background: "#e2e8f0", overflow: "hidden", flexShrink: 0 }}>
-                                                    {u.profile_img ? (
-                                                        <img 
-                                                            src={getImgUrl(u.profile_img)} 
-                                                            alt={u.name} 
-                                                            style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                                                            onError={(e) => {e.target.style.display='none'}} // Sembunyikan jika gambar rusak
-                                                        />
-                                                    ) : (
-                                                        <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>👤</div>
-                                                    )}
-                                                </div>
-                                                <div>
-                                                    <div style={{ fontWeight: "bold", color: "#2d3748" }}>{u.name}</div>
-                                                    <div style={{ fontSize: 12, color: "#718096" }}>{u.phone || "-"}</div>
-                                                </div>
-                                            </div>
-                                        </td>
-
-                                        <td style={{ padding: 15, verticalAlign: "top", color: "#4a5568" }}>{u.email}</td>
-
-                                        {/* Kolom Role (Logic Pewarnaan Badge) */}
-                                        <td style={{ padding: 15, verticalAlign: "top" }}>
-                                            <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
-                                                {u.roles && u.roles.length > 0 ? (
-                                                    u.roles.map((r, idx) => {
-                                                        let badgeColor = { bg: "#edf2f7", text: "#4a5568" }; // Default USER
-                                                        if (r === "ADMIN") badgeColor = { bg: "#fed7d7", text: "#822727" };
-                                                        if (r === "ORGANIZATION") badgeColor = { bg: "#c6f6d5", text: "#22543d" };
-
-                                                        return (
-                                                            <span key={idx} style={{ 
-                                                                background: badgeColor.bg, 
-                                                                color: badgeColor.text, 
-                                                                padding: "2px 8px", 
-                                                                borderRadius: 4, 
-                                                                fontSize: 11, 
-                                                                fontWeight: "bold",
-                                                                border: "1px solid rgba(0,0,0,0.05)"
-                                                            }}>
-                                                                {r}
-                                                            </span>
-                                                        );
-                                                    })
-                                                ) : (
-                                                    <span style={{ background: "#edf2f7", color: "#718096", padding: "2px 8px", borderRadius: 4, fontSize: 11 }}>USER</span>
-                                                )}
-                                            </div>
-                                        </td>
-
-                                        <td style={{ padding: 15, verticalAlign: "top", textAlign: "center" }}>
-                                            {/* Mencegah Admin menghapus dirinya sendiri (opsional logic di frontend) */}
-                                            {u.roles?.includes("ADMIN") ? (
-                                                <span style={{ fontSize: 12, color: "#cbd5e0", fontStyle: "italic" }}>Protected</span>
-                                            ) : (
-                                                <button 
-                                                    onClick={() => handleDelete(u.id)} 
-                                                    style={{ 
-                                                        color: "white", 
-                                                        background: "#e53e3e", 
-                                                        border: "none", 
-                                                        padding: "6px 12px", 
-                                                        borderRadius: 4, 
-                                                        cursor: "pointer", 
-                                                        fontWeight: "bold", 
-                                                        fontSize: 12,
-                                                        transition: "0.2s"
-                                                    }}
-                                                    onMouseOver={(e) => e.target.style.background = "#c53030"}
-                                                    onMouseOut={(e) => e.target.style.background = "#e53e3e"}
-                                                >
-                                                    🗑 Hapus
-                                                </button>
-                                            )}
+                            </thead>
+                            <tbody>
+                                {users.length === 0 ? (
+                                    <tr>
+                                        <td colSpan="5" style={{ padding: "40px", textAlign: "center", color: "#64748b" }}>
+                                            Tidak ada data user.
                                         </td>
                                     </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-            )}
+                                ) : (
+                                    users.map(u => (
+                                        <tr key={u.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                                            <td style={tdStyle}>
+                                                <span style={{
+                                                    background: "#eff6ff",
+                                                    color: "#3b82f6",
+                                                    padding: "4px 8px",
+                                                    borderRadius: "6px",
+                                                    fontSize: "0.8rem",
+                                                    fontWeight: "600"
+                                                }}>
+                                                    #{u.id}
+                                                </span>
+                                            </td>
+
+                                            <td style={tdStyle}>
+                                                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                                    <div style={{
+                                                        width: "42px",
+                                                        height: "42px",
+                                                        borderRadius: "10px",
+                                                        background: "linear-gradient(135deg, #eff6ff, #dbeafe)",
+                                                        overflow: "hidden",
+                                                        flexShrink: 0,
+                                                        display: "flex",
+                                                        alignItems: "center",
+                                                        justifyContent: "center"
+                                                    }}>
+                                                        {u.profile_img ? (
+                                                            <img
+                                                                src={getImgUrl(u.profile_img)}
+                                                                alt={u.name}
+                                                                style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                                                                onError={(e) => { e.target.style.display = 'none' }}
+                                                            />
+                                                        ) : (
+                                                            <span style={{ fontSize: "1.2rem" }}>👤</span>
+                                                        )}
+                                                    </div>
+                                                    <div>
+                                                        <div style={{ fontWeight: "600", color: "#1e293b", fontSize: "0.9rem" }}>
+                                                            {u.name}
+                                                        </div>
+                                                        <div style={{ fontSize: "0.8rem", color: "#64748b" }}>
+                                                            {u.phone || "No phone"}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </td>
+
+                                            <td style={{ ...tdStyle, color: "#475569" }}>{u.email}</td>
+
+                                            <td style={tdStyle}>
+                                                <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                                                    {u.roles && u.roles.length > 0 ? (
+                                                        u.roles.map((r, idx) => {
+                                                            let badgeStyle = { bg: "#f1f5f9", text: "#475569" };
+                                                            if (r === "ADMIN") badgeStyle = { bg: "#fef2f2", text: "#dc2626" };
+                                                            if (r === "ORGANIZATION" || r === "ORGANIZER") badgeStyle = { bg: "#f0fdf4", text: "#16a34a" };
+
+                                                            return (
+                                                                <span key={idx} style={{
+                                                                    background: badgeStyle.bg,
+                                                                    color: badgeStyle.text,
+                                                                    padding: "4px 10px",
+                                                                    borderRadius: "6px",
+                                                                    fontSize: "0.75rem",
+                                                                    fontWeight: "600"
+                                                                }}>
+                                                                    {r}
+                                                                </span>
+                                                            );
+                                                        })
+                                                    ) : (
+                                                        <span style={{
+                                                            background: "#f1f5f9",
+                                                            color: "#64748b",
+                                                            padding: "4px 10px",
+                                                            borderRadius: "6px",
+                                                            fontSize: "0.75rem",
+                                                            fontWeight: "600"
+                                                        }}>
+                                                            USER
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </td>
+
+                                            <td style={{ ...tdStyle, textAlign: "center" }}>
+                                                {u.roles?.includes("ADMIN") ? (
+                                                    <span style={{
+                                                        fontSize: "0.8rem",
+                                                        color: "#94a3b8",
+                                                        fontStyle: "italic"
+                                                    }}>
+                                                        🔒 Protected
+                                                    </span>
+                                                ) : (
+                                                    <button
+                                                        onClick={() => handleDelete(u.id)}
+                                                        style={{
+                                                            color: "white",
+                                                            background: "linear-gradient(135deg, #ef4444, #dc2626)",
+                                                            border: "none",
+                                                            padding: "8px 14px",
+                                                            borderRadius: "6px",
+                                                            cursor: "pointer",
+                                                            fontWeight: "600",
+                                                            fontSize: "0.8rem",
+                                                            transition: "all 0.2s ease"
+                                                        }}
+                                                    >
+                                                        🗑 Hapus
+                                                    </button>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </div>
         </div>
     );
 }
+
+const thStyle = {
+    padding: "14px 16px",
+    textAlign: "left",
+    fontWeight: "600",
+    color: "#475569",
+    fontSize: "0.8rem",
+    textTransform: "uppercase",
+    letterSpacing: "0.5px",
+    borderBottom: "2px solid #e2e8f0"
+};
+
+const tdStyle = {
+    padding: "16px",
+    verticalAlign: "middle"
+};

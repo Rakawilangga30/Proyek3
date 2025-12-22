@@ -3,16 +3,14 @@ import { Link } from "react-router-dom";
 import api from "../api";
 
 export default function Dashboard() {
-    const [events, setEvents] = useState([]);      // Event Published
-    const [upcoming, setUpcoming] = useState([]);  // Event Scheduled
+    const [events, setEvents] = useState([]);
+    const [upcoming, setUpcoming] = useState([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const fetchEvents = async () => {
             try {
-                const res = await api.get("/events"); // Panggil API Public
-                console.log("Data Home:", res.data); // Debug
-
+                const res = await api.get("/events");
                 setEvents(res.data.events || []);
                 setUpcoming(res.data.upcoming || []);
             } catch (error) {
@@ -24,7 +22,6 @@ export default function Dashboard() {
         fetchEvents();
     }, []);
 
-    // Helper: Format Tanggal Cantik
     const formatDate = (dateString) => {
         if (!dateString) return "Coming Soon";
         return new Date(dateString).toLocaleDateString("id-ID", {
@@ -32,76 +29,110 @@ export default function Dashboard() {
         });
     };
 
-    if (loading) return <div style={{ padding: 40, textAlign: "center" }}>⏳ Memuat Event...</div>;
+    if (loading) {
+        return (
+            <div style={{
+                padding: "60px",
+                textAlign: "center",
+                color: "#64748b"
+            }}>
+                <div style={{
+                    width: "40px",
+                    height: "40px",
+                    border: "3px solid #e2e8f0",
+                    borderTopColor: "#3b82f6",
+                    borderRadius: "50%",
+                    animation: "spin 1s linear infinite",
+                    margin: "0 auto 16px"
+                }}></div>
+                Memuat Event...
+            </div>
+        );
+    }
 
     return (
-        <div style={{ padding: "20px", fontFamily: "sans-serif", maxWidth: "1200px", margin: "0 auto" }}>
-            
-            {/* HERO BANNER (Opsional) */}
-            <div style={{ 
-                background: "linear-gradient(to right, #3182ce, #63b3ed)", 
-                color: "white", padding: "40px", borderRadius: "12px", marginBottom: "40px", textAlign: "center"
+        <div style={{
+            padding: "24px",
+            maxWidth: "1200px",
+            margin: "0 auto",
+            minHeight: "100vh"
+        }}>
+
+            {/* HERO BANNER */}
+            <div style={{
+                background: "linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #60a5fa 100%)",
+                color: "white",
+                padding: "48px 40px",
+                borderRadius: "16px",
+                marginBottom: "48px",
+                boxShadow: "0 10px 15px -3px rgba(59, 130, 246, 0.3)",
+                position: "relative",
+                overflow: "hidden"
             }}>
-                <h1 style={{ margin: 0, fontSize: "2.5em" }}>Selamat Datang di Learning Platform</h1>
-                <p style={{ fontSize: "1.2em", opacity: 0.9 }}>Tingkatkan skillmu dengan materi terbaik dari para ahli.</p>
+                <div style={{
+                    position: "absolute",
+                    top: "-50%",
+                    right: "-10%",
+                    width: "300px",
+                    height: "300px",
+                    background: "rgba(255,255,255,0.1)",
+                    borderRadius: "50%"
+                }}></div>
+                <div style={{
+                    position: "absolute",
+                    bottom: "-30%",
+                    left: "20%",
+                    width: "200px",
+                    height: "200px",
+                    background: "rgba(255,255,255,0.05)",
+                    borderRadius: "50%"
+                }}></div>
+                <div style={{ position: "relative", zIndex: 1 }}>
+                    <h1 style={{ margin: "0 0 12px 0", fontSize: "2.25rem", fontWeight: "700" }}>
+                        Selamat Datang di Learning Platform
+                    </h1>
+                    <p style={{ fontSize: "1.1rem", opacity: 0.9, margin: 0, maxWidth: "600px" }}>
+                        Tingkatkan skillmu dengan materi terbaik dari para ahli.
+                    </p>
+                </div>
             </div>
 
-            {/* SEKSI 1: UPCOMING EVENTS (Jika Ada) */}
+            {/* SEKSI 1: UPCOMING EVENTS */}
             {upcoming.length > 0 && (
-                <div style={{ marginBottom: "50px" }}>
-                    <h2 style={{ 
-                        borderLeft: "5px solid #ed8936", paddingLeft: "15px", color: "#2d3748", 
-                        display: "flex", alignItems: "center", gap: "10px"
+                <div style={{ marginBottom: "48px" }}>
+                    <div style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "12px",
+                        marginBottom: "24px"
                     }}>
-                        📅 Coming Soon <span style={{fontSize:"0.6em", fontWeight:"normal", color:"#718096"}}>(Segera Hadir)</span>
-                    </h2>
-                    
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "25px" }}>
+                        <div style={{
+                            width: "4px",
+                            height: "32px",
+                            background: "linear-gradient(180deg, #f59e0b, #d97706)",
+                            borderRadius: "2px"
+                        }}></div>
+                        <h2 style={{ margin: 0, color: "#1e293b", fontSize: "1.5rem" }}>
+                            📅 Coming Soon
+                        </h2>
+                        <span style={{
+                            fontSize: "0.8rem",
+                            color: "#64748b",
+                            background: "#f1f5f9",
+                            padding: "4px 12px",
+                            borderRadius: "20px"
+                        }}>
+                            Segera Hadir
+                        </span>
+                    </div>
+
+                    <div style={{
+                        display: "grid",
+                        gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
+                        gap: "24px"
+                    }}>
                         {upcoming.map(evt => (
-                            <div key={evt.id} style={{ 
-                                border: "1px solid #e2e8f0", borderRadius: "10px", overflow: "hidden", 
-                                background: "#fffaf0", boxShadow: "0 4px 6px rgba(0,0,0,0.05)", position: "relative"
-                            }}>
-                                {/* Badge Scheduled */}
-                                <div style={{ 
-                                    position: "absolute", top: "10px", right: "10px", 
-                                    background: "#ed8936", color: "white", padding: "5px 10px", 
-                                    borderRadius: "15px", fontSize: "0.8em", fontWeight: "bold"
-                                }}>
-                                    🔜 Upcoming
-                                </div>
-
-                                {/* Placeholder Gambar */}
-                                <div style={{ height: "180px", background: "#cbd5e0", display: "flex", alignItems: "center", justifyContent: "center", color: "#718096" }}>
-                                    {evt.thumbnail_url ? (
-                                        <img
-                                            src={(evt.thumbnail_url || "").startsWith("http") ? evt.thumbnail_url : `http://localhost:8080/${(evt.thumbnail_url || "").replace(/^\/+/, "")}`}
-                                            alt={evt.title}
-                                            style={{width:"100%", height:"100%", objectFit:"cover"}}
-                                        />
-                                    ) : (
-                                        <span>No Image</span>
-                                    )}
-                                </div>
-
-                                <div style={{ padding: "20px" }}>
-                                    <h3 style={{ margin: "0 0 10px 0", color: "#2c5282" }}>{evt.title}</h3>
-                                    <p style={{ color: "#718096", fontSize: "0.9em", margin: "0 0 15px 0" }}>
-                                        {evt.description.substring(0, 80)}...
-                                    </p>
-                                    
-                                    <div style={{ background: "white", padding: "10px", borderRadius: "6px", border: "1px dashed #ed8936", fontSize: "0.9em", color: "#c05621", marginBottom: "15px" }}>
-                                        ⏰ Tayang: {formatDate(evt.publish_at)}
-                                    </div>
-
-                                    <Link to={`/event/${evt.id}`} style={{ 
-                                        display: "block", textAlign: "center", background: "white", color: "#ed8936", border: "1px solid #ed8936",
-                                        padding: "10px", borderRadius: "6px", textDecoration: "none", fontWeight: "bold", transition: "0.2s"
-                                    }}>
-                                        Lihat Detail
-                                    </Link>
-                                </div>
-                            </div>
+                            <EventCard key={evt.id} event={evt} isUpcoming={true} formatDate={formatDate} />
                         ))}
                     </div>
                 </div>
@@ -109,55 +140,178 @@ export default function Dashboard() {
 
             {/* SEKSI 2: AVAILABLE NOW */}
             <div>
-                <h2 style={{ borderLeft: "5px solid #48bb78", paddingLeft: "15px", color: "#2d3748" }}>
-                    🔥 Available Now
-                </h2>
-                
-                {events.length === 0 ? (
-                    <p style={{ color: "#718096", fontStyle: "italic" }}>Belum ada event yang aktif saat ini.</p>
-                ) : (
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "25px" }}>
-                        {events.map(evt => (
-                            <div key={evt.id} style={{ 
-                                border: "1px solid #e2e8f0", borderRadius: "10px", overflow: "hidden", 
-                                background: "white", boxShadow: "0 4px 6px rgba(0,0,0,0.05)", transition: "transform 0.2s"
-                            }}>
-                                {/* Placeholder Gambar */}
-                                <div style={{ height: "180px", background: "#cbd5e0", display: "flex", alignItems: "center", justifyContent: "center", color: "#718096" }}>
-                                    {evt.thumbnail_url ? (
-                                        <img
-                                            src={(evt.thumbnail_url || "").startsWith("http") ? evt.thumbnail_url : `http://localhost:8080/${(evt.thumbnail_url || "").replace(/^\/+/, "")}`}
-                                            alt={evt.title}
-                                            style={{width:"100%", height:"100%", objectFit:"cover"}}
-                                        />
-                                    ) : (
-                                        <span>No Image</span>
-                                    )}
-                                </div>
+                <div style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "12px",
+                    marginBottom: "24px"
+                }}>
+                    <div style={{
+                        width: "4px",
+                        height: "32px",
+                        background: "linear-gradient(180deg, #22c55e, #16a34a)",
+                        borderRadius: "2px"
+                    }}></div>
+                    <h2 style={{ margin: 0, color: "#1e293b", fontSize: "1.5rem" }}>
+                        🔥 Available Now
+                    </h2>
+                </div>
 
-                                <div style={{ padding: "20px" }}>
-                                    <div style={{display: "flex", justifyContent: "space-between", alignItems: "start"}}>
-                                        <h3 style={{ margin: "0 0 10px 0", color: "#2d3748" }}>{evt.title}</h3>
-                                        <span style={{background: "#e2e8f0", fontSize:"0.7em", padding:"3px 8px", borderRadius:"10px", color:"#4a5568"}}>
-                                            {evt.category}
-                                        </span>
-                                    </div>
-                                    <p style={{ color: "#718096", fontSize: "0.9em", margin: "0 0 20px 0" }}>
-                                        {evt.description.substring(0, 100)}...
-                                    </p>
-                                    <Link to={`/event/${evt.id}`} style={{ 
-                                        display: "block", textAlign: "center", background: "#3182ce", color: "black", 
-                                        padding: "10px", borderRadius: "6px", textDecoration: "none", fontWeight: "bold"
-                                    }}>
-                                        Mulai Belajar
-                                    </Link>
-                                </div>
-                            </div>
+                {events.length === 0 ? (
+                    <div style={{
+                        textAlign: "center",
+                        padding: "60px 20px",
+                        background: "#f8fafc",
+                        borderRadius: "12px",
+                        color: "#64748b"
+                    }}>
+                        <div style={{ fontSize: "3rem", marginBottom: "16px" }}>📭</div>
+                        <p style={{ margin: 0 }}>Belum ada event yang aktif saat ini.</p>
+                    </div>
+                ) : (
+                    <div style={{
+                        display: "grid",
+                        gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
+                        gap: "24px"
+                    }}>
+                        {events.map(evt => (
+                            <EventCard key={evt.id} event={evt} isUpcoming={false} formatDate={formatDate} />
                         ))}
                     </div>
                 )}
             </div>
+        </div>
+    );
+}
 
+// Event Card Component
+function EventCard({ event, isUpcoming, formatDate }) {
+    const evt = event;
+
+    return (
+        <div style={{
+            background: "white",
+            borderRadius: "12px",
+            overflow: "hidden",
+            boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
+            transition: "all 0.3s ease",
+            position: "relative",
+            border: isUpcoming ? "2px solid #fef3c7" : "1px solid #e2e8f0"
+        }}>
+            {/* Badge Upcoming */}
+            {isUpcoming && (
+                <div style={{
+                    position: "absolute",
+                    top: "12px",
+                    right: "12px",
+                    background: "linear-gradient(135deg, #f59e0b, #d97706)",
+                    color: "white",
+                    padding: "6px 12px",
+                    borderRadius: "20px",
+                    fontSize: "0.75rem",
+                    fontWeight: "600",
+                    boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+                    zIndex: 1
+                }}>
+                    🔜 Upcoming
+                </div>
+            )}
+
+            {/* Thumbnail */}
+            <div style={{
+                height: "180px",
+                background: "linear-gradient(135deg, #e2e8f0, #cbd5e1)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#64748b",
+                overflow: "hidden"
+            }}>
+                {evt.thumbnail_url ? (
+                    <img
+                        src={(evt.thumbnail_url || "").startsWith("http") ? evt.thumbnail_url : `http://localhost:8080/${(evt.thumbnail_url || "").replace(/^\/+/, "")}`}
+                        alt={evt.title}
+                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                    />
+                ) : (
+                    <span style={{ fontSize: "3rem" }}>🖼️</span>
+                )}
+            </div>
+
+            {/* Content */}
+            <div style={{ padding: "20px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", marginBottom: "12px" }}>
+                    <h3 style={{
+                        margin: 0,
+                        color: "#1e293b",
+                        fontSize: "1.1rem",
+                        fontWeight: "600",
+                        flex: 1,
+                        paddingRight: "8px"
+                    }}>
+                        {evt.title}
+                    </h3>
+                    {evt.category && (
+                        <span style={{
+                            background: "#eff6ff",
+                            color: "#3b82f6",
+                            fontSize: "0.7rem",
+                            padding: "4px 10px",
+                            borderRadius: "20px",
+                            fontWeight: "500",
+                            whiteSpace: "nowrap"
+                        }}>
+                            {evt.category}
+                        </span>
+                    )}
+                </div>
+
+                <p style={{
+                    color: "#64748b",
+                    fontSize: "0.9rem",
+                    margin: "0 0 16px 0",
+                    lineHeight: "1.5"
+                }}>
+                    {evt.description?.substring(0, 100)}...
+                </p>
+
+                {/* Tanggal untuk Upcoming */}
+                {isUpcoming && (
+                    <div style={{
+                        background: "#fffbeb",
+                        padding: "10px 14px",
+                        borderRadius: "8px",
+                        border: "1px dashed #fbbf24",
+                        fontSize: "0.85rem",
+                        color: "#b45309",
+                        marginBottom: "16px",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px"
+                    }}>
+                        ⏰ Tayang: {formatDate(evt.publish_at)}
+                    </div>
+                )}
+
+                {/* Button */}
+                <Link to={`/event/${evt.id}`} style={{
+                    display: "block",
+                    textAlign: "center",
+                    background: isUpcoming
+                        ? "white"
+                        : "linear-gradient(135deg, #3b82f6, #2563eb)",
+                    color: isUpcoming ? "#f59e0b" : "white",
+                    border: isUpcoming ? "2px solid #f59e0b" : "none",
+                    padding: "12px 16px",
+                    borderRadius: "8px",
+                    textDecoration: "none",
+                    fontWeight: "600",
+                    fontSize: "0.9rem",
+                    transition: "all 0.2s ease"
+                }}>
+                    {isUpcoming ? "Lihat Detail" : "Mulai Belajar"}
+                </Link>
+            </div>
         </div>
     );
 }

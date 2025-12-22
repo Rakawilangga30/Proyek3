@@ -31,48 +31,162 @@ export default function AdminOrgApprovals() {
                 rejection_reason: reason || ""
             });
             alert(`Aplikasi berhasil ${status === 'APPROVED' ? 'Disetujui' : 'Ditolak'}`);
-            loadData(); // Refresh list
+            loadData();
         } catch (error) {
             alert("Gagal memproses: " + (error.response?.data?.error || "Error"));
         }
     };
 
     return (
-        <div style={{ background: "white", padding: 25, borderRadius: 8, boxShadow: "0 2px 4px rgba(0,0,0,0.1)" }}>
-            <h2 style={{ margin: "0 0 20px 0", color: "#2d3748" }}>📝 Persetujuan Creator</h2>
+        <div>
+            {/* Header */}
+            <div style={{ marginBottom: "24px" }}>
+                <h2 style={{ margin: "0 0 4px 0", color: "#1e293b", fontSize: "1.5rem" }}>
+                    📝 Persetujuan Creator
+                </h2>
+                <p style={{ margin: 0, color: "#64748b", fontSize: "0.9rem" }}>
+                    Review pengajuan menjadi organizer
+                </p>
+            </div>
 
-            {loading ? <p>⏳ Memuat data...</p> : (
-                applications.length === 0 ? (
-                    <p style={{ color: "#718096", fontStyle: "italic" }}>Tidak ada pengajuan pending saat ini.</p>
+            {/* Content */}
+            <div style={{
+                background: "white",
+                borderRadius: "12px",
+                boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+                padding: "24px"
+            }}>
+                {loading ? (
+                    <div style={{ padding: "40px", textAlign: "center", color: "#64748b" }}>
+                        <div style={{
+                            width: "32px",
+                            height: "32px",
+                            border: "3px solid #e2e8f0",
+                            borderTopColor: "#3b82f6",
+                            borderRadius: "50%",
+                            animation: "spin 1s linear infinite",
+                            margin: "0 auto 12px"
+                        }}></div>
+                        Memuat data...
+                    </div>
+                ) : applications.length === 0 ? (
+                    <div style={{
+                        textAlign: "center",
+                        padding: "48px 20px",
+                        color: "#64748b"
+                    }}>
+                        <div style={{ fontSize: "3rem", marginBottom: "16px" }}>✅</div>
+                        <p style={{ margin: 0, fontWeight: "500" }}>Tidak ada pengajuan pending saat ini.</p>
+                    </div>
                 ) : (
-                    <div style={{ display: "grid", gap: 20 }}>
+                    <div style={{ display: "grid", gap: "16px" }}>
                         {applications.map(app => (
-                            <div key={app.id} style={{ border: "1px solid #e2e8f0", borderRadius: 8, padding: 20 }}>
-                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 15 }}>
-                                    <div>
-                                        <h3 style={{ margin: "0 0 5px 0", color: "#2b6cb0" }}>
-                                            {app.org_name} 
-                                            <span style={{ fontSize: "0.7em", background: "#bee3f8", color: "#2b6cb0", padding: "2px 6px", borderRadius: 4, marginLeft: 8, verticalAlign: "middle" }}>
+                            <div key={app.id} style={{
+                                border: "1px solid #e2e8f0",
+                                borderRadius: "12px",
+                                padding: "20px",
+                                background: "#fafafa",
+                                transition: "all 0.2s ease"
+                            }}>
+                                <div style={{
+                                    display: "flex",
+                                    justifyContent: "space-between",
+                                    alignItems: "flex-start",
+                                    flexWrap: "wrap",
+                                    gap: "16px"
+                                }}>
+                                    <div style={{ flex: 1 }}>
+                                        <div style={{
+                                            display: "flex",
+                                            alignItems: "center",
+                                            gap: "10px",
+                                            marginBottom: "12px"
+                                        }}>
+                                            <h3 style={{ margin: 0, color: "#1e293b", fontSize: "1.1rem" }}>
+                                                {app.org_name}
+                                            </h3>
+                                            <span style={{
+                                                fontSize: "0.75rem",
+                                                background: "#dbeafe",
+                                                color: "#1d4ed8",
+                                                padding: "4px 10px",
+                                                borderRadius: "6px",
+                                                fontWeight: "600"
+                                            }}>
                                                 {app.org_category}
                                             </span>
-                                        </h3>
-                                        <p style={{ margin: "5px 0", fontSize: 14, color: "#4a5568" }}>
+                                        </div>
+
+                                        <p style={{
+                                            margin: "0 0 12px 0",
+                                            fontSize: "0.9rem",
+                                            color: "#475569"
+                                        }}>
                                             <strong>Pemohon:</strong> User ID {app.user_id} ({app.org_email})
                                         </p>
-                                        <p style={{ margin: "10px 0", fontStyle: "italic", background: "#f7fafc", padding: 10, borderRadius: 4 }}>
+
+                                        <div style={{
+                                            background: "white",
+                                            padding: "12px 16px",
+                                            borderRadius: "8px",
+                                            border: "1px solid #e2e8f0",
+                                            fontStyle: "italic",
+                                            color: "#64748b",
+                                            fontSize: "0.9rem",
+                                            marginBottom: "12px"
+                                        }}>
                                             "{app.reason}"
-                                        </p>
+                                        </div>
+
                                         {app.org_website && (
-                                            <a href={app.org_website} target="_blank" rel="noreferrer" style={{ color: "#3182ce", fontSize: 14, textDecoration: "underline" }}>
+                                            <a
+                                                href={app.org_website}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                style={{
+                                                    color: "#3b82f6",
+                                                    fontSize: "0.9rem",
+                                                    display: "inline-flex",
+                                                    alignItems: "center",
+                                                    gap: "4px"
+                                                }}
+                                            >
                                                 🔗 Lihat Website
                                             </a>
                                         )}
                                     </div>
-                                    <div style={{ display: "flex", gap: 10 }}>
-                                        <button onClick={() => handleReview(app.id, "APPROVED")} style={{ padding: "8px 16px", background: "#48bb78", color: "white", border: "none", borderRadius: 4, cursor: "pointer", fontWeight: "bold" }}>
+
+                                    <div style={{ display: "flex", gap: "10px", flexShrink: 0 }}>
+                                        <button
+                                            onClick={() => handleReview(app.id, "APPROVED")}
+                                            style={{
+                                                padding: "10px 18px",
+                                                background: "linear-gradient(135deg, #22c55e, #16a34a)",
+                                                color: "white",
+                                                border: "none",
+                                                borderRadius: "8px",
+                                                cursor: "pointer",
+                                                fontWeight: "600",
+                                                fontSize: "0.9rem",
+                                                transition: "all 0.2s ease"
+                                            }}
+                                        >
                                             ✅ Setujui
                                         </button>
-                                        <button onClick={() => handleReview(app.id, "REJECTED")} style={{ padding: "8px 16px", background: "#f56565", color: "white", border: "none", borderRadius: 4, cursor: "pointer", fontWeight: "bold" }}>
+                                        <button
+                                            onClick={() => handleReview(app.id, "REJECTED")}
+                                            style={{
+                                                padding: "10px 18px",
+                                                background: "linear-gradient(135deg, #ef4444, #dc2626)",
+                                                color: "white",
+                                                border: "none",
+                                                borderRadius: "8px",
+                                                cursor: "pointer",
+                                                fontWeight: "600",
+                                                fontSize: "0.9rem",
+                                                transition: "all 0.2s ease"
+                                            }}
+                                        >
                                             ❌ Tolak
                                         </button>
                                     </div>
@@ -80,8 +194,8 @@ export default function AdminOrgApprovals() {
                             </div>
                         ))}
                     </div>
-                )
-            )}
+                )}
+            </div>
         </div>
     );
 }

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import api from "../../api"; // Pastikan path ke api.js benar
+import { Link } from "react-router-dom";
+import api from "../../api";
 
 export default function MyCourses() {
     const [courses, setCourses] = useState([]);
@@ -11,9 +12,7 @@ export default function MyCourses() {
 
     const fetchMyCourses = async () => {
         try {
-            // Ambil semua pembelian sesi milik user
             const res = await api.get("/user/purchases");
-            // Backend sekarang mengembalikan { purchases: [...] }
             const purchases = res.data.purchases || [];
 
             // Group purchases by event
@@ -21,9 +20,19 @@ export default function MyCourses() {
             purchases.forEach(p => {
                 const eid = p.event_id || p.EventID || 0;
                 if (!byEvent[eid]) {
-                    byEvent[eid] = { event_id: eid, event_title: p.event_title || p.EventTitle || "Untitled Event", thumbnail: p.thumbnail_url || p.EventThumb || null, sessions: [] };
+                    byEvent[eid] = {
+                        event_id: eid,
+                        event_title: p.event_title || p.EventTitle || "Untitled Event",
+                        thumbnail: p.thumbnail_url || p.EventThumb || null,
+                        sessions: []
+                    };
                 }
-                byEvent[eid].sessions.push({ id: p.session_id || p.SessionID, title: p.session_title || p.Title || "Sesi", purchase_id: p.id || p.PurchaseID, price: p.price_paid });
+                byEvent[eid].sessions.push({
+                    id: p.session_id || p.SessionID,
+                    title: p.session_title || p.Title || "Sesi",
+                    purchase_id: p.id || p.PurchaseID,
+                    price: p.price_paid
+                });
             });
 
             const grouped = Object.values(byEvent);
@@ -35,48 +44,173 @@ export default function MyCourses() {
         }
     };
 
-    if (loading) return <div style={{ padding: 20 }}>Sedang memuat kursus...</div>;
+    if (loading) {
+        return (
+            <div style={{ padding: "40px", textAlign: "center", color: "#64748b" }}>
+                <div style={{
+                    width: "32px",
+                    height: "32px",
+                    border: "3px solid #e2e8f0",
+                    borderTopColor: "#3b82f6",
+                    borderRadius: "50%",
+                    animation: "spin 1s linear infinite",
+                    margin: "0 auto 12px"
+                }}></div>
+                Memuat kursus...
+            </div>
+        );
+    }
 
     return (
-        <div style={{ padding: 30 }}>
-            <h2 style={{ marginBottom: 20 }}>📚 Kursus Saya</h2>
-            
+        <div>
+            {/* Header */}
+            <div style={{ marginBottom: "24px" }}>
+                <h2 style={{ margin: "0 0 4px 0", color: "#1e293b", fontSize: "1.5rem" }}>
+                    📚 Kursus Saya
+                </h2>
+                <p style={{ margin: 0, color: "#64748b", fontSize: "0.9rem" }}>
+                    Lihat semua kursus yang telah Anda beli
+                </p>
+            </div>
+
             {courses.length === 0 ? (
-                <div style={{ color: "#718096" }}>Belum ada kursus yang diikuti.</div>
+                <div style={{
+                    background: "white",
+                    borderRadius: "12px",
+                    boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+                    padding: "48px 20px",
+                    textAlign: "center"
+                }}>
+                    <div style={{ fontSize: "3rem", marginBottom: "16px" }}>📭</div>
+                    <p style={{ margin: "0 0 8px 0", fontWeight: "500", color: "#1e293b" }}>
+                        Belum ada kursus yang diikuti
+                    </p>
+                    <p style={{ margin: "0 0 20px 0", color: "#64748b", fontSize: "0.9rem" }}>
+                        Jelajahi kursus menarik untuk mulai belajar
+                    </p>
+                    <Link
+                        to="/"
+                        style={{
+                            display: "inline-block",
+                            padding: "12px 24px",
+                            background: "linear-gradient(135deg, #3b82f6, #2563eb)",
+                            color: "white",
+                            textDecoration: "none",
+                            borderRadius: "8px",
+                            fontWeight: "600",
+                            fontSize: "0.9rem"
+                        }}
+                    >
+                        🔍 Jelajahi Kursus
+                    </Link>
+                </div>
             ) : (
-                <div style={{ display: "grid", gap: 20 }}>
+                <div style={{ display: "grid", gap: "20px" }}>
                     {courses.map(eventGroup => (
-                        <div key={eventGroup.event_id} style={{ border: "1px solid #e2e8f0", borderRadius: 8, overflow: "hidden", background: "white" }}>
-                            <div style={{ display: "flex", gap: 15, alignItems: "center", padding: 15, borderBottom: "1px solid #eee" }}>
-                                <div style={{ width: 120, height: 80, background: "#e2e8f0" }}>
+                        <div key={eventGroup.event_id} style={{
+                            background: "white",
+                            borderRadius: "12px",
+                            overflow: "hidden",
+                            boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)"
+                        }}>
+                            {/* Event Header */}
+                            <div style={{
+                                display: "flex",
+                                gap: "16px",
+                                alignItems: "center",
+                                padding: "20px",
+                                borderBottom: "1px solid #f1f5f9",
+                                background: "#fafafa"
+                            }}>
+                                <div style={{
+                                    width: "100px",
+                                    height: "70px",
+                                    background: "linear-gradient(135deg, #eff6ff, #dbeafe)",
+                                    borderRadius: "8px",
+                                    overflow: "hidden",
+                                    flexShrink: 0
+                                }}>
                                     {eventGroup.thumbnail ? (
-                                        <img src={`http://localhost:8080/${eventGroup.thumbnail}`} alt={eventGroup.event_title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                                        <img
+                                            src={`http://localhost:8080/${eventGroup.thumbnail}`}
+                                            alt={eventGroup.event_title}
+                                            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                                        />
                                     ) : (
-                                        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "#718096" }}>No Thumb</div>
+                                        <div style={{
+                                            display: "flex",
+                                            alignItems: "center",
+                                            justifyContent: "center",
+                                            height: "100%",
+                                            fontSize: "1.5rem"
+                                        }}>
+                                            🎓
+                                        </div>
                                     )}
                                 </div>
                                 <div style={{ flex: 1 }}>
-                                    <h3 style={{ margin: 0 }}>{eventGroup.event_title}</h3>
-                                    <div style={{ color: "#718096", fontSize: "0.9em" }}>{eventGroup.sessions.length} sesi dibeli</div>
+                                    <h3 style={{ margin: "0 0 4px 0", color: "#1e293b", fontSize: "1.1rem" }}>
+                                        {eventGroup.event_title}
+                                    </h3>
+                                    <span style={{
+                                        background: "#dbeafe",
+                                        color: "#1d4ed8",
+                                        padding: "4px 10px",
+                                        borderRadius: "6px",
+                                        fontSize: "0.75rem",
+                                        fontWeight: "600"
+                                    }}>
+                                        {eventGroup.sessions.length} sesi dibeli
+                                    </span>
                                 </div>
-                                <div style={{ paddingRight: 15 }}>
-                                    <button style={{ background: "#2b6cb0", color: "white", padding: "8px 12px", border: "none", borderRadius: 6, cursor: "pointer" }} onClick={() => window.location.href = `/dashboard/event/${eventGroup.event_id}`}>
-                                        Lihat Event
-                                    </button>
-                                </div>
+                                <Link
+                                    to={`/event/${eventGroup.event_id}`}
+                                    style={{
+                                        padding: "10px 16px",
+                                        background: "linear-gradient(135deg, #3b82f6, #2563eb)",
+                                        color: "white",
+                                        textDecoration: "none",
+                                        borderRadius: "8px",
+                                        fontWeight: "600",
+                                        fontSize: "0.85rem"
+                                    }}
+                                >
+                                    Lihat Event
+                                </Link>
                             </div>
-                            <div style={{ padding: 15 }}>
-                                {eventGroup.sessions.map(s => (
-                                    <div key={s.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid #f1f5f9" }}>
+
+                            {/* Sessions List */}
+                            <div style={{ padding: "16px 20px" }}>
+                                {eventGroup.sessions.map((s, idx) => (
+                                    <div key={s.id} style={{
+                                        display: "flex",
+                                        justifyContent: "space-between",
+                                        alignItems: "center",
+                                        padding: "12px 0",
+                                        borderBottom: idx < eventGroup.sessions.length - 1 ? "1px solid #f1f5f9" : "none"
+                                    }}>
                                         <div>
-                                            <div style={{ fontWeight: "bold" }}>{s.title}</div>
-                                            <div style={{ color: "#718096", fontSize: 13 }}>Harga dibayar: Rp {s.price?.toLocaleString?.() ?? s.price}</div>
+                                            <div style={{ fontWeight: "500", color: "#1e293b", fontSize: "0.9rem" }}>
+                                                {s.title}
+                                            </div>
+                                            <div style={{ color: "#64748b", fontSize: "0.8rem" }}>
+                                                Dibayar: Rp {s.price?.toLocaleString?.() ?? s.price}
+                                            </div>
                                         </div>
-                                        <div>
-                                            <button style={{ padding: "8px 12px", background: "#3182ce", color: "white", border: "none", borderRadius: 6, cursor: "pointer" }} onClick={() => window.location.href = `/dashboard/learning/session/${s.id}`}>
-                                                Lanjut Belajar
-                                            </button>
-                                        </div>
+                                        <Link
+                                            to={`/event/${eventGroup.event_id}`}
+                                            style={{
+                                                padding: "8px 14px",
+                                                background: "#eff6ff",
+                                                color: "#3b82f6",
+                                                textDecoration: "none",
+                                                borderRadius: "6px",
+                                                fontWeight: "500",
+                                                fontSize: "0.8rem"
+                                            }}
+                                        >
+                                            ▶️ Lanjut Belajar
+                                        </Link>
                                     </div>
                                 ))}
                             </div>

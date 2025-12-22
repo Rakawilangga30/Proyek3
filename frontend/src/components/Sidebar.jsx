@@ -3,8 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 export default function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
-  
-  // Ambil data user dari localStorage (asumsi disimpan saat login)
+
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const roles = user.roles || [];
 
@@ -14,59 +13,155 @@ export default function Sidebar() {
     navigate("/login");
   };
 
-  const isActive = (path) => location.pathname === path ? "#2b6cb0" : "transparent";
-  const textCol = (path) => location.pathname === path ? "white" : "#cbd5e0";
+  const isActive = (path) => location.pathname === path;
 
-  // Style item menu
   const MenuItem = ({ to, label, icon }) => (
     <Link to={to} style={{ textDecoration: "none" }}>
       <div style={{
-        padding: "12px 20px", margin: "5px 10px", borderRadius: "8px",
-        backgroundColor: isActive(to), color: textCol(to),
-        display: "flex", alignItems: "center", gap: "10px", transition: "0.3s"
+        padding: "12px 16px",
+        margin: "4px 12px",
+        borderRadius: "8px",
+        backgroundColor: isActive(to) ? "#3b82f6" : "transparent",
+        color: isActive(to) ? "white" : "#64748b",
+        display: "flex",
+        alignItems: "center",
+        gap: "12px",
+        transition: "all 0.2s ease",
+        fontWeight: isActive(to) ? "600" : "500",
+        fontSize: "0.9rem"
       }}>
-        <span>{icon}</span>
-        <span style={{ fontWeight: 500 }}>{label}</span>
+        <span style={{ fontSize: "1.1rem" }}>{icon}</span>
+        <span>{label}</span>
       </div>
     </Link>
   );
 
+  const SectionTitle = ({ children }) => (
+    <p style={{
+      padding: "16px 16px 8px",
+      fontSize: "0.7rem",
+      fontWeight: "600",
+      color: "#94a3b8",
+      textTransform: "uppercase",
+      letterSpacing: "1px"
+    }}>
+      {children}
+    </p>
+  );
+
   return (
-    <div style={{ width: "260px", height: "100vh", backgroundColor: "#1a202c", color: "white", position: "fixed", left: 0, top: 0, overflowY: "auto" }}>
-      <div style={{ padding: "20px", borderBottom: "1px solid #2d3748" }}>
-        <h2 style={{ margin: 0, fontSize: "1.2rem" }}>🚀 Proyek3</h2>
-        <p style={{ fontSize: "0.8rem", color: "#718096", margin: 0 }}>Halo, {user.name?.split(" ")[0]}</p>
+    <div style={{
+      width: "260px",
+      height: "100vh",
+      backgroundColor: "#ffffff",
+      borderRight: "1px solid #e2e8f0",
+      position: "fixed",
+      left: 0,
+      top: 0,
+      overflowY: "auto",
+      display: "flex",
+      flexDirection: "column"
+    }}>
+      {/* Header */}
+      <div style={{
+        padding: "20px 16px",
+        borderBottom: "1px solid #e2e8f0",
+        background: "linear-gradient(135deg, #1e40af, #3b82f6)"
+      }}>
+        <h2 style={{
+          margin: 0,
+          fontSize: "1.25rem",
+          color: "white",
+          fontWeight: "700"
+        }}>
+          🚀 Proyek3
+        </h2>
+        <p style={{
+          fontSize: "0.85rem",
+          color: "rgba(255,255,255,0.8)",
+          margin: "4px 0 0 0"
+        }}>
+          Halo, {user.name?.split(" ")[0] || "User"}
+        </p>
       </div>
 
-      <div style={{ padding: "20px 0" }}>
-        <p style={{ padding: "0 20px", fontSize: "0.75rem", color: "#718096", textTransform: "uppercase", letterSpacing: "1px" }}>Menu Utama</p>
-        
-        {/* SEMUA USER punya menu ini */}
+      {/* Menu Items */}
+      <div style={{ flex: 1, padding: "8px 0" }}>
+        <SectionTitle>Menu Utama</SectionTitle>
+
+        <MenuItem to="/dashboard" label="Dashboard" icon="🏠" />
         <MenuItem to="/dashboard/profile" label="Profil Saya" icon="👤" />
         <MenuItem to="/dashboard/my-courses" label="Kursus Saya" icon="📚" />
 
-        {/* MENU KHUSUS ORGANIZER */}
+        {/* ORGANIZER Menu */}
         {roles.includes("ORGANIZER") && (
           <>
-            <p style={{ padding: "20px 20px 5px", fontSize: "0.75rem", color: "#718096", textTransform: "uppercase", letterSpacing: "1px" }}>Creator Area</p>
+            <SectionTitle>Creator Area</SectionTitle>
             <MenuItem to="/dashboard/org" label="Dashboard Org" icon="🏢" />
             <MenuItem to="/dashboard/org/events" label="Report" icon="📊" />
           </>
         )}
 
-        {/* MENU KHUSUS ADMIN */}
+        {/* ADMIN Menu */}
         {roles.includes("ADMIN") && (
           <>
-            <p style={{ padding: "20px 20px 5px", fontSize: "0.75rem", color: "#718096", textTransform: "uppercase", letterSpacing: "1px" }}>Admin Area</p>
+            <SectionTitle>Admin Area</SectionTitle>
             <MenuItem to="/dashboard/admin/users" label="Kelola User" icon="👥" />
             <MenuItem to="/dashboard/admin/approvals" label="Persetujuan Org" icon="📝" />
           </>
         )}
       </div>
 
-      <div style={{ padding: "20px", borderTop: "1px solid #2d3748", marginTop: "auto" }}>
-        <button onClick={handleLogout} style={{ width: "100%", padding: "10px", backgroundColor: "#c53030", color: "white", border: "none", borderRadius: "6px", cursor: "pointer" }}>
-          Keluar
+      {/* Footer - Home & Logout */}
+      <div style={{
+        padding: "16px",
+        borderTop: "1px solid #e2e8f0",
+        display: "flex",
+        flexDirection: "column",
+        gap: "10px"
+      }}>
+        <Link
+          to="/"
+          style={{
+            width: "100%",
+            padding: "12px",
+            background: "linear-gradient(135deg, #3b82f6, #2563eb)",
+            color: "white",
+            border: "none",
+            borderRadius: "8px",
+            cursor: "pointer",
+            fontWeight: "600",
+            fontSize: "0.9rem",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "8px",
+            transition: "all 0.2s ease",
+            textDecoration: "none"
+          }}
+        >
+          🏠 Kembali ke Home
+        </Link>
+        <button
+          onClick={handleLogout}
+          style={{
+            width: "100%",
+            padding: "12px",
+            background: "linear-gradient(135deg, #ef4444, #dc2626)",
+            color: "white",
+            border: "none",
+            borderRadius: "8px",
+            cursor: "pointer",
+            fontWeight: "600",
+            fontSize: "0.9rem",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "8px",
+            transition: "all 0.2s ease"
+          }}
+        >
+          🚪 Keluar
         </button>
       </div>
     </div>

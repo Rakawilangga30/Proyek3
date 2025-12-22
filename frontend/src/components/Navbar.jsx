@@ -2,39 +2,85 @@ import { Link, useNavigate } from "react-router-dom";
 
 export default function Navbar() {
   const navigate = useNavigate();
-  // Cek apakah ada user di localstorage
   const user = JSON.parse(localStorage.getItem("user"));
 
   const handleLogout = () => {
-    localStorage.clear(); // Hapus semua data
+    localStorage.clear();
     navigate("/login");
   };
 
   return (
-    <nav style={{ padding: "15px 30px", background: "#1a202c", color: "white", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-      <Link to="/" style={{ fontSize: "1.5rem", fontWeight: "bold", color: "white", textDecoration: "none" }}>
+    <nav style={{
+      padding: "12px 32px",
+      background: "linear-gradient(135deg, #1e40af, #3b82f6)",
+      color: "white",
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+      position: "sticky",
+      top: 0,
+      zIndex: 100
+    }}>
+      {/* Logo */}
+      <Link to="/" style={{
+        fontSize: "1.5rem",
+        fontWeight: "700",
+        color: "white",
+        textDecoration: "none",
+        display: "flex",
+        alignItems: "center",
+        gap: "8px"
+      }}>
         🚀 Proyek3
       </Link>
 
-      <div style={{ display: "flex", gap: "15px" }}>
-        <Link to="/" style={{ color: "white", textDecoration: "none" }}>Home</Link>
-        
-        {/* LOGIC TOMBOL */}
+      {/* Navigation Links */}
+      <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
+        <Link to="/" style={linkStyle}>Home</Link>
+
         {user ? (
-          // Jika SUDAH Login
           <>
-            <Link to="/dashboard" style={{ color: "#63b3ed", fontWeight: "bold", textDecoration: "none" }}>
+            <Link to="/dashboard" style={{
+              ...linkStyle,
+              background: "rgba(255,255,255,0.2)",
+              padding: "8px 16px",
+              borderRadius: "8px",
+              fontWeight: "600"
+            }}>
               Dashboard
             </Link>
-            <button onClick={handleLogout} style={{ background: "red", color: "white", border: "none", borderRadius: "5px", padding: "5px 10px", cursor: "pointer" }}>
+            <button
+              onClick={handleLogout}
+              style={{
+                background: "rgba(239, 68, 68, 0.9)",
+                color: "white",
+                border: "none",
+                borderRadius: "8px",
+                padding: "8px 16px",
+                cursor: "pointer",
+                fontWeight: "500",
+                fontSize: "0.9rem",
+                transition: "all 0.2s ease"
+              }}
+            >
               Logout
             </button>
           </>
         ) : (
-          // Jika BELUM Login
           <>
-            <Link to="/login" style={{ color: "white", textDecoration: "none" }}>Login</Link>
-            <Link to="/register" style={{ background: "#3182ce", padding: "8px 15px", borderRadius: "5px", color: "white", textDecoration: "none" }}>
+            <Link to="/login" style={linkStyle}>Login</Link>
+            <Link to="/register" style={{
+              background: "white",
+              color: "#2563eb",
+              padding: "10px 20px",
+              borderRadius: "8px",
+              textDecoration: "none",
+              fontWeight: "600",
+              fontSize: "0.9rem",
+              transition: "all 0.2s ease",
+              boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
+            }}>
               Daftar
             </Link>
           </>
@@ -44,20 +90,12 @@ export default function Navbar() {
   );
 }
 
-// Style Helper biar rapi
 const linkStyle = {
-    color: "#e2e8f0",
-    textDecoration: "none",
-    fontWeight: "500",
-    fontSize: "1em",
-    transition: "color 0.2s"
-};
-
-const buttonLinkStyle = {
-    color: "white",
-    textDecoration: "none",
-    padding: "8px 15px",
-    borderRadius: "5px",
-    fontWeight: "bold",
-    fontSize: "0.9em"
+  color: "rgba(255,255,255,0.9)",
+  textDecoration: "none",
+  fontWeight: "500",
+  fontSize: "0.95rem",
+  padding: "6px 12px",
+  borderRadius: "6px",
+  transition: "all 0.2s ease"
 };
