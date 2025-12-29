@@ -164,5 +164,15 @@ func RegisterRoutes(r *gin.Engine) {
 		admin.GET("/official-org", controllers.GetOfficialOrganization)
 		admin.PUT("/official-org", controllers.UpdateOfficialOrganization)
 		admin.POST("/official-org/logo", controllers.UploadOfficialOrgLogo)
+		admin.GET("/official-org/events", controllers.GetOfficialOrgEvents)
+		admin.GET("/official-org/events/:eventId", controllers.GetOfficialOrgEventDetail)
+		admin.PUT("/official-org/events/:eventId", controllers.UpdateOfficialOrgEvent)
+		admin.POST("/official-org/events/:eventId/thumbnail", controllers.UploadOfficialOrgEventThumbnail)
+		admin.DELETE("/official-org/events/:eventId", controllers.DeleteOfficialOrgEvent)
+		admin.PUT("/official-org/sessions/:sessionId", controllers.UpdateOfficialOrgSession)
+		admin.PUT("/official-org/videos/:videoId", controllers.UpdateOfficialOrgVideo)
+		admin.DELETE("/official-org/videos/:videoId", controllers.DeleteOfficialOrgVideo)
+		admin.PUT("/official-org/files/:fileId", controllers.UpdateOfficialOrgFile)
+		admin.DELETE("/official-org/files/:fileId", controllers.DeleteOfficialOrgFile)
 	}
 }

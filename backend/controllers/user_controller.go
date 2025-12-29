@@ -566,12 +566,47 @@ func UpdateUserByAdmin(c *gin.Context) {
 func DeleteUser(c *gin.Context) {
 	id := c.Param("id")
 
-	// Hapus relasi role
+	// Check if user exists
+	var exists int
+	err := config.DB.Get(&exists, "SELECT COUNT(*) FROM users WHERE id=?", id)
+	if err != nil || exists == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		return
+	}
+
+	// Delete related data in order to avoid foreign key constraints
+	// 1. Delete notifications
+	config.DB.Exec("DELETE FROM notifications WHERE user_id=?", id)
+
+	// 2. Delete user roles
 	config.DB.Exec("DELETE FROM user_roles WHERE user_id=?", id)
 
-	_, err := config.DB.Exec("DELETE FROM users WHERE id=?", id)
+	// 3. Delete enrollments
+	config.DB.Exec("DELETE FROM enrollments WHERE user_id=?", id)
+
+	// 4. Delete purchases (must be before orders)
+	config.DB.Exec("DELETE FROM purchases WHERE user_id=?", id)
+
+	// 5. Delete orders
+	config.DB.Exec("DELETE FROM orders WHERE user_id=?", id)
+
+	// 6. Delete reviews
+	config.DB.Exec("DELETE FROM reviews WHERE user_id=?", id)
+
+	// 7. Delete affiliate submissions and related ledgers
+	config.DB.Exec("DELETE FROM affiliate_ledgers WHERE affiliate_submission_id IN (SELECT id FROM affiliate_submissions WHERE user_id=?)", id)
+	config.DB.Exec("DELETE FROM affiliate_submission_videos WHERE submission_id IN (SELECT id FROM affiliate_submissions WHERE user_id=?)", id)
+	config.DB.Exec("DELETE FROM affiliate_submission_files WHERE submission_id IN (SELECT id FROM affiliate_submissions WHERE user_id=?)", id)
+	config.DB.Exec("DELETE FROM affiliate_submissions WHERE user_id=?", id)
+
+	// 8. Delete organization applications
+	config.DB.Exec("DELETE FROM organization_applications WHERE user_id=?", id)
+
+	// Finally delete the user
+	_, err = config.DB.Exec("DELETE FROM users WHERE id=?", id)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete user"})
+		fmt.Printf("Error deleting user %s: %v\n", id, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete user: " + err.Error()})
 		return
 	}
 

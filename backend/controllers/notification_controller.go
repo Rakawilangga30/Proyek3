@@ -7,7 +7,6 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"BACKEND/config"
-	"BACKEND/models"
 )
 
 // =============================
@@ -16,9 +15,24 @@ import (
 func GetMyNotifications(c *gin.Context) {
 	userID := c.GetInt64("user_id")
 
-	var notifications []models.Notification
+	type NotificationRow struct {
+		ID        int64  `db:"id" json:"id"`
+		UserID    int64  `db:"user_id" json:"user_id"`
+		Type      string `db:"type" json:"type"`
+		Title     string `db:"title" json:"title"`
+		Message   string `db:"message" json:"message"`
+		IsRead    bool   `db:"is_read" json:"is_read"`
+		CreatedAt string `db:"created_at" json:"created_at"`
+	}
+
+	var notifications []NotificationRow
 	err := config.DB.Select(&notifications, `
-		SELECT id, user_id, type, title, COALESCE(message, '') as message, is_read, created_at
+		SELECT id, user_id, 
+		       COALESCE(type, '') as type, 
+		       COALESCE(title, '') as title, 
+		       COALESCE(message, '') as message, 
+		       is_read, 
+		       created_at
 		FROM notifications 
 		WHERE user_id = ? 
 		ORDER BY created_at DESC 
@@ -26,8 +40,13 @@ func GetMyNotifications(c *gin.Context) {
 	`, userID)
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch notifications"})
+		println("Error fetching notifications:", err.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch notifications: " + err.Error()})
 		return
+	}
+
+	if notifications == nil {
+		notifications = []NotificationRow{}
 	}
 
 	// Count unread

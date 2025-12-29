@@ -24,8 +24,8 @@ export default function AdminOfficialOrg() {
                 email: orgRes.data.organization.email || ''
             });
 
-            // Get events under Official org
-            const eventsRes = await api.get(`/admin/organizations/${orgRes.data.organization.id}`);
+            // Get events under Official org using new endpoint
+            const eventsRes = await api.get('/admin/official-org/events');
             setEvents(eventsRes.data.events || []);
         } catch (err) {
             console.error(err);
@@ -40,6 +40,19 @@ export default function AdminOfficialOrg() {
             await api.put('/admin/official-org', editForm);
             alert('✅ Berhasil diupdate!');
             setEditing(false);
+            fetchData();
+        } catch (err) {
+            alert('Gagal: ' + (err.response?.data?.error || err.message));
+        }
+    };
+
+    const handleDeleteEvent = async (eventId, eventTitle) => {
+        if (!window.confirm(`Yakin ingin menghapus event "${eventTitle}"? Semua data session dan materi akan ikut terhapus.`)) {
+            return;
+        }
+        try {
+            await api.delete(`/admin/official-org/events/${eventId}`);
+            alert('✅ Event berhasil dihapus!');
             fetchData();
         } catch (err) {
             alert('Gagal: ' + (err.response?.data?.error || err.message));
@@ -82,6 +95,55 @@ export default function AdminOfficialOrg() {
                     <button onClick={() => setEditing(!editing)} style={editing ? buttonSecondary : buttonPrimary}>
                         {editing ? "Batal" : "✏️ Edit"}
                     </button>
+                </div>
+
+                {/* Logo Display & Upload */}
+                <div style={{ display: "flex", alignItems: "center", gap: "20px", marginBottom: "20px", padding: "16px", background: "#f8fafc", borderRadius: "10px" }}>
+                    {org.logo_url ? (
+                        <img
+                            src={`http://localhost:8080/${org.logo_url}`}
+                            alt="Logo"
+                            style={{ width: "80px", height: "80px", objectFit: "cover", borderRadius: "12px", border: "2px solid #e2e8f0" }}
+                        />
+                    ) : (
+                        <div style={{ width: "80px", height: "80px", background: "#e2e8f0", borderRadius: "12px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "2rem", color: "#94a3b8" }}>
+                            🏛️
+                        </div>
+                    )}
+                    <div>
+                        <div style={{ fontWeight: "600", marginBottom: "8px" }}>Logo Organisasi</div>
+                        <label style={{
+                            display: "inline-block",
+                            padding: "6px 14px",
+                            background: "#3b82f6",
+                            color: "white",
+                            borderRadius: "6px",
+                            cursor: "pointer",
+                            fontSize: "0.85rem"
+                        }}>
+                            📷 Upload Logo
+                            <input
+                                type="file"
+                                accept="image/*"
+                                style={{ display: "none" }}
+                                onChange={async (e) => {
+                                    const file = e.target.files[0];
+                                    if (!file) return;
+                                    const formData = new FormData();
+                                    formData.append('logo', file);
+                                    try {
+                                        await api.post('/admin/official-org/logo', formData, {
+                                            headers: { 'Content-Type': 'multipart/form-data' }
+                                        });
+                                        alert('✅ Logo berhasil diupload!');
+                                        fetchData();
+                                    } catch (err) {
+                                        alert('Gagal upload: ' + (err.response?.data?.error || err.message));
+                                    }
+                                }}
+                            />
+                        </label>
+                    </div>
                 </div>
 
                 {editing ? (
@@ -171,18 +233,49 @@ export default function AdminOfficialOrg() {
                                     )}
                                     <div style={{ flex: 1 }}>
                                         <h4 style={{ margin: "0 0 8px 0", color: "#1e293b" }}>{event.title}</h4>
-                                        <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", fontSize: "0.9rem", color: "#64748b" }}>
+                                        <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", fontSize: "0.85rem", color: "#64748b" }}>
                                             <span>📅 {formatDate(event.created_at)}</span>
-                                            <span>📊 {event.publish_status}</span>
-                                            {event.sessions_count && <span>📚 {event.sessions_count} session</span>}
+                                            <span style={{
+                                                padding: "2px 8px",
+                                                borderRadius: "12px",
+                                                background: event.publish_status === 'PUBLISHED' ? '#d1fae5' : '#fef3c7',
+                                                color: event.publish_status === 'PUBLISHED' ? '#047857' : '#b45309'
+                                            }}>
+                                                {event.publish_status}
+                                            </span>
+                                            <span>📚 {event.sessions_count || 0} sesi</span>
+                                            <span>🛒 {event.total_sales || 0} penjualan</span>
                                         </div>
                                     </div>
-                                    <Link
-                                        to={`/dashboard/admin/organizations/${org.id}`}
-                                        style={{ color: "#3b82f6", textDecoration: "none", fontWeight: "500" }}
-                                    >
-                                        Detail →
-                                    </Link>
+                                    <div style={{ display: "flex", gap: "8px" }}>
+                                        <Link
+                                            to={`/dashboard/admin/official-org/events/${event.id}`}
+                                            style={{
+                                                padding: "6px 12px",
+                                                background: "#3b82f6",
+                                                color: "white",
+                                                textDecoration: "none",
+                                                borderRadius: "6px",
+                                                fontSize: "0.85rem"
+                                            }}
+                                        >
+                                            👁️ Detail
+                                        </Link>
+                                        <button
+                                            onClick={() => handleDeleteEvent(event.id, event.title)}
+                                            style={{
+                                                padding: "6px 12px",
+                                                background: "#ef4444",
+                                                color: "white",
+                                                border: "none",
+                                                borderRadius: "6px",
+                                                cursor: "pointer",
+                                                fontSize: "0.85rem"
+                                            }}
+                                        >
+                                            🗑️ Hapus
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         ))}

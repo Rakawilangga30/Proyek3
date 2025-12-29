@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 )
 
 // ========================================================
@@ -203,10 +202,41 @@ func GetAffiliateSubmissionByID(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"submission": submission})
+	// Fetch videos from affiliate_submission_videos table
+	var videos []struct {
+		ID    int64  `db:"id" json:"id"`
+		Title string `db:"title" json:"title"`
+		URL   string `db:"url" json:"url"`
+	}
+	config.DB.Select(&videos, `
+		SELECT id, COALESCE(title, '') as title, url 
+		FROM affiliate_submission_videos 
+		WHERE submission_id = ? 
+		ORDER BY id ASC
+	`, submissionID)
+
+	// Fetch files from affiliate_submission_files table
+	var files []struct {
+		ID    int64  `db:"id" json:"id"`
+		Title string `db:"title" json:"title"`
+		URL   string `db:"url" json:"url"`
+	}
+	config.DB.Select(&files, `
+		SELECT id, COALESCE(title, '') as title, url
+		FROM affiliate_submission_files 
+		WHERE submission_id = ? 
+		ORDER BY id ASC
+	`, submissionID)
+
+	c.JSON(http.StatusOK, gin.H{
+		"submission": submission,
+		"videos":     videos,
+		"files":      files,
+	})
 }
 
 // ReviewAffiliateSubmission - Approve or reject affiliate event submission
+// APPROVE: Create event + session + transfer materials to session_videos/files
 func ReviewAffiliateSubmission(c *gin.Context) {
 	adminID := c.GetInt64("user_id")
 	submissionID := c.Param("id")
@@ -220,7 +250,7 @@ func ReviewAffiliateSubmission(c *gin.Context) {
 		return
 	}
 
-	// Get submission
+	// Get full submission data
 	var submission struct {
 		ID               int64   `db:"id"`
 		UserID           *int64  `db:"user_id"`
@@ -236,8 +266,14 @@ func ReviewAffiliateSubmission(c *gin.Context) {
 		FileTitle        *string `db:"file_title"`
 		Status           string  `db:"status"`
 	}
-	err := config.DB.Get(&submission, `SELECT * FROM affiliate_submissions WHERE id = ?`, submissionID)
+	err := config.DB.Get(&submission, `
+		SELECT id, user_id, full_name, email, event_title, event_description, 
+		       event_price, poster_url, video_url, video_title, file_url, file_title, status 
+		FROM affiliate_submissions 
+		WHERE id = ?
+	`, submissionID)
 	if err != nil {
+		fmt.Printf("Error loading submission %s: %v\n", submissionID, err)
 		c.JSON(http.StatusNotFound, gin.H{"error": "Pengajuan tidak ditemukan"})
 		return
 	}
@@ -269,6 +305,7 @@ func ReviewAffiliateSubmission(c *gin.Context) {
 		`, officialOrgID, submission.EventTitle, description, submission.PosterURL, submission.ID)
 
 		if err != nil {
+			fmt.Printf("[APPROVE] Error creating event: %v\n", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal membuat event"})
 			return
 		}
@@ -282,52 +319,115 @@ func ReviewAffiliateSubmission(c *gin.Context) {
 		`, eventID, submission.EventTitle, description, submission.EventPrice)
 
 		if err != nil {
+			fmt.Printf("[APPROVE] Error creating session: %v\n", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal membuat session"})
 			return
 		}
 
 		sessionID, _ := sessionResult.LastInsertId()
 
-		// Copy materials to session
-		if submission.VideoURL != nil && *submission.VideoURL != "" {
-			// Copy video file to session videos folder
-			videoTitle := "Video Materi"
+		// ============================================
+		// TRANSFER MATERIALS - FIX: Use video_url and file_url columns
+		// ============================================
+		os.MkdirAll("uploads/videos", os.ModePerm)
+		os.MkdirAll("uploads/files", os.ModePerm)
+
+		// --- VIDEOS ---
+		var videos []struct {
+			Title string `db:"title"`
+			URL   string `db:"url"`
+		}
+		config.DB.Select(&videos, `
+			SELECT COALESCE(title, 'Video Materi') as title, url 
+			FROM affiliate_submission_videos 
+			WHERE submission_id = ?
+		`, submissionID)
+
+		fmt.Printf("[APPROVE] Found %d videos in affiliate_submission_videos\n", len(videos))
+
+		// Fallback to legacy video_url if no videos in new table
+		if len(videos) == 0 && submission.VideoURL != nil && *submission.VideoURL != "" {
+			fmt.Printf("[APPROVE] Using legacy video_url: %s\n", *submission.VideoURL)
+			title := "Video Materi"
 			if submission.VideoTitle != nil && *submission.VideoTitle != "" {
-				videoTitle = *submission.VideoTitle
+				title = *submission.VideoTitle
 			}
-
-			// Generate new filename
-			ext := filepath.Ext(*submission.VideoURL)
-			newFilename := fmt.Sprintf("%d_%s%s", time.Now().UnixNano(), uuid.New().String()[:8], ext)
-			newPath := filepath.Join("uploads/videos", newFilename)
-
-			// Copy file
-			os.MkdirAll("uploads/videos", os.ModePerm)
-			copyFile(*submission.VideoURL, newPath)
-
-			config.DB.Exec(`
-				INSERT INTO session_videos (session_id, title, filename)
-				VALUES (?, ?, ?)
-			`, sessionID, videoTitle, newFilename)
+			videos = append(videos, struct {
+				Title string `db:"title"`
+				URL   string `db:"url"`
+			}{Title: title, URL: *submission.VideoURL})
 		}
 
-		if submission.FileURL != nil && *submission.FileURL != "" {
-			fileTitle := "Modul Materi"
-			if submission.FileTitle != nil && *submission.FileTitle != "" {
-				fileTitle = *submission.FileTitle
+		// Insert all videos to session_videos - FIX: use video_url column
+		for i, video := range videos {
+			videoFilename := filepath.Base(video.URL)
+			srcPath := video.URL
+			dstPath := filepath.Join("uploads/videos", videoFilename)
+
+			// Copy file
+			if _, err := os.Stat(srcPath); err == nil {
+				copyFile(srcPath, dstPath)
 			}
 
-			ext := filepath.Ext(*submission.FileURL)
-			newFilename := fmt.Sprintf("%d_%s%s", time.Now().UnixNano(), uuid.New().String()[:8], ext)
-			newPath := filepath.Join("uploads/files", newFilename)
+			// FIX: Insert dengan kolom video_url, bukan filename
+			_, insertErr := config.DB.Exec(`
+				INSERT INTO session_videos (session_id, title, video_url, order_index)
+				VALUES (?, ?, ?, ?)
+			`, sessionID, video.Title, dstPath, i+1)
+			if insertErr != nil {
+				fmt.Printf("[APPROVE] Error inserting video %d: %v\n", i+1, insertErr)
+			} else {
+				fmt.Printf("[APPROVE] ✅ Video %d inserted: %s\n", i+1, dstPath)
+			}
+		}
 
-			os.MkdirAll("uploads/files", os.ModePerm)
-			copyFile(*submission.FileURL, newPath)
+		// --- FILES ---
+		var files []struct {
+			Title string `db:"title"`
+			URL   string `db:"url"`
+		}
+		config.DB.Select(&files, `
+			SELECT COALESCE(title, 'Modul Materi') as title, url 
+			FROM affiliate_submission_files 
+			WHERE submission_id = ?
+		`, submissionID)
 
-			config.DB.Exec(`
-				INSERT INTO session_files (session_id, title, filename)
-				VALUES (?, ?, ?)
-			`, sessionID, fileTitle, newFilename)
+		fmt.Printf("[APPROVE] Found %d files in affiliate_submission_files\n", len(files))
+
+		// Fallback to legacy file_url if no files in new table
+		if len(files) == 0 && submission.FileURL != nil && *submission.FileURL != "" {
+			fmt.Printf("[APPROVE] Using legacy file_url: %s\n", *submission.FileURL)
+			title := "Modul Materi"
+			if submission.FileTitle != nil && *submission.FileTitle != "" {
+				title = *submission.FileTitle
+			}
+			files = append(files, struct {
+				Title string `db:"title"`
+				URL   string `db:"url"`
+			}{Title: title, URL: *submission.FileURL})
+		}
+
+		// Insert all files to session_files - FIX: use file_url column
+		for i, file := range files {
+			fileFilename := filepath.Base(file.URL)
+			srcPath := file.URL
+			dstPath := filepath.Join("uploads/files", fileFilename)
+
+			// Copy file
+			if _, err := os.Stat(srcPath); err == nil {
+				copyFile(srcPath, dstPath)
+			}
+
+			// FIX: Insert dengan kolom file_url, bukan filename
+			_, insertErr := config.DB.Exec(`
+				INSERT INTO session_files (session_id, title, file_url, order_index)
+				VALUES (?, ?, ?, ?)
+			`, sessionID, file.Title, dstPath, i+1)
+			if insertErr != nil {
+				fmt.Printf("[APPROVE] Error inserting file %d: %v\n", i+1, insertErr)
+			} else {
+				fmt.Printf("[APPROVE] ✅ File %d inserted: %s\n", i+1, dstPath)
+			}
 		}
 
 		// Update submission status
@@ -339,7 +439,6 @@ func ReviewAffiliateSubmission(c *gin.Context) {
 
 		// Add AFFILIATE role to user if not already has it
 		if submission.UserID != nil {
-			// Check if user already has AFFILIATE role
 			var hasRole int
 			config.DB.Get(&hasRole, `
 				SELECT COUNT(*) FROM user_roles ur
@@ -347,7 +446,6 @@ func ReviewAffiliateSubmission(c *gin.Context) {
 				WHERE ur.user_id = ? AND r.name = 'AFFILIATE'
 			`, *submission.UserID)
 
-			// Add AFFILIATE role if not exists (ADD, not replace)
 			if hasRole == 0 {
 				config.DB.Exec(`
 					INSERT INTO user_roles (user_id, role_id)
@@ -362,13 +460,15 @@ func ReviewAffiliateSubmission(c *gin.Context) {
 			`, *submission.UserID, fmt.Sprintf("Event '%s' telah dipublikasikan dan siap dijual.", submission.EventTitle))
 		}
 
+		fmt.Printf("[APPROVE] ✅ Created event=%d, session=%d with %d videos and %d files\n", eventID, sessionID, len(videos), len(files))
+
 		c.JSON(http.StatusOK, gin.H{
 			"message":  "Event berhasil dipublikasikan",
 			"event_id": eventID,
 		})
 
 	} else {
-		// Reject
+		// Reject - just update status
 		config.DB.Exec(`
 			UPDATE affiliate_submissions 
 			SET status = 'REJECTED', reviewed_by = ?, reviewed_at = NOW(), review_note = ?
@@ -577,4 +677,294 @@ func UploadOfficialOrgLogo(c *gin.Context) {
 	config.DB.Exec(`UPDATE organizations SET logo_url = ? WHERE name = 'Official'`, path)
 
 	c.JSON(http.StatusOK, gin.H{"message": "Logo berhasil diupload", "logo_url": path})
+}
+
+// GetOfficialOrgEvents - Get all events under Official organization
+func GetOfficialOrgEvents(c *gin.Context) {
+	// Get Official org ID first
+	var officialOrgID int64
+	err := config.DB.Get(&officialOrgID, `SELECT id FROM organizations WHERE name = 'Official' LIMIT 1`)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Organisasi Official belum dibuat"})
+		return
+	}
+
+	var events []struct {
+		ID                    int64   `db:"id" json:"id"`
+		Title                 string  `db:"title" json:"title"`
+		Description           *string `db:"description" json:"description"`
+		Category              *string `db:"category" json:"category"`
+		ThumbnailURL          *string `db:"thumbnail_url" json:"thumbnail_url"`
+		PublishStatus         string  `db:"publish_status" json:"publish_status"`
+		AffiliateSubmissionID *int64  `db:"affiliate_submission_id" json:"affiliate_submission_id"`
+		SessionsCount         int     `db:"sessions_count" json:"sessions_count"`
+		TotalSales            int     `db:"total_sales" json:"total_sales"`
+		CreatedAt             string  `db:"created_at" json:"created_at"`
+	}
+
+	err = config.DB.Select(&events, `
+		SELECT 
+			e.id, e.title, e.description, e.category, e.thumbnail_url, 
+			e.publish_status, e.affiliate_submission_id, e.created_at,
+			(SELECT COUNT(*) FROM sessions WHERE event_id = e.id) as sessions_count,
+			COALESCE((SELECT COUNT(*) FROM affiliate_ledgers al 
+			          JOIN affiliate_submissions asub ON al.affiliate_submission_id = asub.id
+			          JOIN events ev ON ev.affiliate_submission_id = asub.id
+			          WHERE ev.id = e.id), 0) as total_sales
+		FROM events e
+		WHERE e.organization_id = ?
+		ORDER BY e.created_at DESC
+	`, officialOrgID)
+
+	if err != nil {
+		fmt.Printf("Error fetching official events: %v\n", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal memuat data"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"events": events, "organization_id": officialOrgID})
+}
+
+// GetOfficialOrgEventDetail - Get single event detail with sessions
+func GetOfficialOrgEventDetail(c *gin.Context) {
+	eventID := c.Param("eventId")
+
+	var event struct {
+		ID                    int64   `db:"id" json:"id"`
+		Title                 string  `db:"title" json:"title"`
+		Description           *string `db:"description" json:"description"`
+		Category              *string `db:"category" json:"category"`
+		ThumbnailURL          *string `db:"thumbnail_url" json:"thumbnail_url"`
+		PublishStatus         string  `db:"publish_status" json:"publish_status"`
+		AffiliateSubmissionID *int64  `db:"affiliate_submission_id" json:"affiliate_submission_id"`
+		CreatedAt             string  `db:"created_at" json:"created_at"`
+	}
+
+	err := config.DB.Get(&event, `
+		SELECT id, title, description, category, thumbnail_url, publish_status, 
+		       affiliate_submission_id, created_at
+		FROM events 
+		WHERE id = ?
+	`, eventID)
+
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Event tidak ditemukan"})
+		return
+	}
+
+	// Get sessions
+	var sessions []struct {
+		ID            int64   `db:"id" json:"id"`
+		Title         string  `db:"title" json:"title"`
+		Description   *string `db:"description" json:"description"`
+		Price         int64   `db:"price" json:"price"`
+		PublishStatus string  `db:"publish_status" json:"publish_status"`
+		VideosCount   int     `db:"videos_count" json:"videos_count"`
+		FilesCount    int     `db:"files_count" json:"files_count"`
+	}
+	config.DB.Select(&sessions, `
+		SELECT s.id, s.title, s.description, s.price, s.publish_status,
+		       (SELECT COUNT(*) FROM session_videos WHERE session_id = s.id) as videos_count,
+		       (SELECT COUNT(*) FROM session_files WHERE session_id = s.id) as files_count
+		FROM sessions s
+		WHERE s.event_id = ?
+		ORDER BY s.id ASC
+	`, eventID)
+
+	c.JSON(http.StatusOK, gin.H{"event": event, "sessions": sessions})
+}
+
+// DeleteOfficialOrgEvent - Delete event from Official org
+func DeleteOfficialOrgEvent(c *gin.Context) {
+	eventID := c.Param("eventId")
+
+	// Delete sessions first
+	var sessionIDs []int64
+	config.DB.Select(&sessionIDs, `SELECT id FROM sessions WHERE event_id = ?`, eventID)
+
+	for _, sessionID := range sessionIDs {
+		config.DB.Exec(`DELETE FROM session_videos WHERE session_id = ?`, sessionID)
+		config.DB.Exec(`DELETE FROM session_files WHERE session_id = ?`, sessionID)
+	}
+	config.DB.Exec(`DELETE FROM sessions WHERE event_id = ?`, eventID)
+
+	// Delete the event
+	_, err := config.DB.Exec(`DELETE FROM events WHERE id = ?`, eventID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal menghapus event"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Event berhasil dihapus"})
+}
+
+// ========================================================
+// OFFICIAL ORG CRUD - EDIT FUNCTIONALITY
+// ========================================================
+
+// UpdateOfficialOrgEvent - Update event title, description, category
+func UpdateOfficialOrgEvent(c *gin.Context) {
+	eventID := c.Param("eventId")
+
+	var input struct {
+		Title       string `json:"title"`
+		Description string `json:"description"`
+		Category    string `json:"category"`
+	}
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Data tidak valid"})
+		return
+	}
+
+	_, err := config.DB.Exec(`
+		UPDATE events 
+		SET title = ?, description = ?, category = ?
+		WHERE id = ?
+	`, input.Title, input.Description, input.Category, eventID)
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal update event"})
+		return
+	}
+
+	// Also update session title if event title changed
+	config.DB.Exec(`UPDATE sessions SET title = ? WHERE event_id = ?`, input.Title, eventID)
+
+	c.JSON(http.StatusOK, gin.H{"message": "Event berhasil diupdate"})
+}
+
+// UploadOfficialOrgEventThumbnail - Upload/replace event thumbnail
+func UploadOfficialOrgEventThumbnail(c *gin.Context) {
+	eventID := c.Param("eventId")
+
+	file, err := c.FormFile("thumbnail")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "File thumbnail diperlukan"})
+		return
+	}
+
+	os.MkdirAll("uploads/posters", os.ModePerm)
+	filename := fmt.Sprintf("%d_%s%s", time.Now().UnixNano(), eventID, filepath.Ext(file.Filename))
+	uploadPath := filepath.Join("uploads/posters", filename)
+
+	if err := c.SaveUploadedFile(file, uploadPath); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal upload thumbnail"})
+		return
+	}
+
+	_, err = config.DB.Exec(`UPDATE events SET thumbnail_url = ? WHERE id = ?`, uploadPath, eventID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal update thumbnail"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Thumbnail berhasil diupdate", "thumbnail_url": uploadPath})
+}
+
+// UpdateOfficialOrgSession - Update session title, description, price
+func UpdateOfficialOrgSession(c *gin.Context) {
+	sessionID := c.Param("sessionId")
+
+	var input struct {
+		Title       string `json:"title"`
+		Description string `json:"description"`
+		Price       int64  `json:"price"`
+	}
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Data tidak valid"})
+		return
+	}
+
+	_, err := config.DB.Exec(`
+		UPDATE sessions 
+		SET title = ?, description = ?, price = ?
+		WHERE id = ?
+	`, input.Title, input.Description, input.Price, sessionID)
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal update session"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Session berhasil diupdate"})
+}
+
+// UpdateOfficialOrgVideo - Update video title
+func UpdateOfficialOrgVideo(c *gin.Context) {
+	videoID := c.Param("videoId")
+
+	var input struct {
+		Title       string `json:"title"`
+		Description string `json:"description"`
+	}
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Data tidak valid"})
+		return
+	}
+
+	_, err := config.DB.Exec(`
+		UPDATE session_videos 
+		SET title = ?, description = ?
+		WHERE id = ?
+	`, input.Title, input.Description, videoID)
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal update video"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Video berhasil diupdate"})
+}
+
+// DeleteOfficialOrgVideo - Delete a video
+func DeleteOfficialOrgVideo(c *gin.Context) {
+	videoID := c.Param("videoId")
+
+	_, err := config.DB.Exec(`DELETE FROM session_videos WHERE id = ?`, videoID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal hapus video"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Video berhasil dihapus"})
+}
+
+// UpdateOfficialOrgFile - Update file title
+func UpdateOfficialOrgFile(c *gin.Context) {
+	fileID := c.Param("fileId")
+
+	var input struct {
+		Title       string `json:"title"`
+		Description string `json:"description"`
+	}
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Data tidak valid"})
+		return
+	}
+
+	_, err := config.DB.Exec(`
+		UPDATE session_files 
+		SET title = ?, description = ?
+		WHERE id = ?
+	`, input.Title, input.Description, fileID)
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal update file"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "File berhasil diupdate"})
+}
+
+// DeleteOfficialOrgFile - Delete a file
+func DeleteOfficialOrgFile(c *gin.Context) {
+	fileID := c.Param("fileId")
+
+	_, err := config.DB.Exec(`DELETE FROM session_files WHERE id = ?`, fileID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal hapus file"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "File berhasil dihapus"})
 }

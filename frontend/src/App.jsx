@@ -40,6 +40,7 @@ import AdminAffiliateList from "./pages/admin/AdminAffiliateList";
 import AdminAffiliateDetail from "./pages/admin/AdminAffiliateDetail";
 import AdminAffiliateLedgers from "./pages/admin/AdminAffiliateLedgers";
 import AdminOfficialOrg from "./pages/admin/AdminOfficialOrg";
+import AdminOfficialOrgEventDetail from "./pages/admin/AdminOfficialOrgEventDetail";
 
 function App() {
   return (
@@ -84,6 +85,7 @@ function App() {
           <Route path="admin/affiliates/:id" element={<AdminAffiliateDetail />} />
           <Route path="admin/affiliate-ledgers" element={<AdminAffiliateLedgers />} />
           <Route path="admin/official-org" element={<AdminOfficialOrg />} />
+          <Route path="admin/official-org/events/:eventId" element={<AdminOfficialOrgEventDetail />} />
         </Route>
 
         {/* 404 */}

@@ -171,18 +171,26 @@ func GetAffiliateEvents(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"events": events})
 }
 
-// SubmitAffiliateEvent - Affiliate submits new event with materials
+// SubmitAffiliateEvent - Affiliate submits new event for review
+// FLOW: Insert ke affiliate_submissions dulu, admin yang create event saat approve
 func SubmitAffiliateEvent(c *gin.Context) {
 	userID := c.GetInt64("user_id")
+	fmt.Printf("[SubmitAffiliate] ========== START SUBMIT ==========\n")
+	fmt.Printf("[SubmitAffiliate] User ID: %d\n", userID)
 
 	// Parse form data
 	eventTitle := c.PostForm("event_title")
 	eventDescription := c.PostForm("event_description")
 	eventPriceStr := c.PostForm("event_price")
-	videoTitle := c.PostForm("video_title")
-	fileTitle := c.PostForm("file_title")
+	eventCategory := c.PostForm("event_category")
+	if eventCategory == "" {
+		eventCategory = "Teknologi"
+	}
+
+	fmt.Printf("[SubmitAffiliate] Event: %s, Price: %s, Category: %s\n", eventTitle, eventPriceStr, eventCategory)
 
 	if eventTitle == "" {
+		fmt.Printf("[SubmitAffiliate] ERROR: event_title is empty\n")
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Judul event wajib diisi"})
 		return
 	}
@@ -201,58 +209,160 @@ func SubmitAffiliateEvent(c *gin.Context) {
 		}
 	}
 
-	// Handle video upload
-	var videoURL string
-	videoFile, err := c.FormFile("video")
-	if err == nil {
-		os.MkdirAll("uploads/affiliate_videos", os.ModePerm)
-		videoFilename := fmt.Sprintf("%d_%s%s", time.Now().UnixNano(), uuid.New().String()[:8], filepath.Ext(videoFile.Filename))
-		videoPath := filepath.Join("uploads/affiliate_videos", videoFilename)
-		if err := c.SaveUploadedFile(videoFile, videoPath); err == nil {
-			videoURL = videoPath
+	// Handle multiple video uploads (max 3)
+	type uploadedMaterial struct {
+		Title       string
+		Description string
+		URL         string
+	}
+	var uploadedVideos []uploadedMaterial
+	form, _ := c.MultipartForm()
+	os.MkdirAll("uploads/affiliate_videos", os.ModePerm)
+	os.MkdirAll("uploads/affiliate_files", os.ModePerm)
+
+	if form != nil {
+		videoFiles := form.File["videos"]
+		videoTitles := c.PostFormArray("video_titles")
+		videoDescriptions := c.PostFormArray("video_descriptions")
+
+		for i, videoFile := range videoFiles {
+			if i >= 3 {
+				break // Max 3 videos
+			}
+			videoFilename := fmt.Sprintf("%d_%s%s", time.Now().UnixNano(), uuid.New().String()[:8], filepath.Ext(videoFile.Filename))
+			videoPath := filepath.Join("uploads/affiliate_videos", videoFilename)
+			if err := c.SaveUploadedFile(videoFile, videoPath); err == nil {
+				title := ""
+				if i < len(videoTitles) {
+					title = videoTitles[i]
+				}
+				if title == "" {
+					title = fmt.Sprintf("Video %d", i+1)
+				}
+				description := ""
+				if i < len(videoDescriptions) {
+					description = videoDescriptions[i]
+				}
+				uploadedVideos = append(uploadedVideos, uploadedMaterial{Title: title, Description: description, URL: videoPath})
+			}
 		}
 	}
 
-	// Handle file/module upload
-	var fileURL string
-	moduleFile, err := c.FormFile("file")
-	if err == nil {
-		os.MkdirAll("uploads/affiliate_files", os.ModePerm)
-		moduleFilename := fmt.Sprintf("%d_%s%s", time.Now().UnixNano(), uuid.New().String()[:8], filepath.Ext(moduleFile.Filename))
-		modulePath := filepath.Join("uploads/affiliate_files", moduleFilename)
-		if err := c.SaveUploadedFile(moduleFile, modulePath); err == nil {
-			fileURL = modulePath
+	// Handle multiple file uploads (max 3)
+	var uploadedFiles []uploadedMaterial
+	if form != nil {
+		moduleFiles := form.File["files"]
+		fileTitles := c.PostFormArray("file_titles")
+		fileDescriptions := c.PostFormArray("file_descriptions")
+
+		for i, moduleFile := range moduleFiles {
+			if i >= 3 {
+				break // Max 3 files
+			}
+			moduleFilename := fmt.Sprintf("%d_%s%s", time.Now().UnixNano(), uuid.New().String()[:8], filepath.Ext(moduleFile.Filename))
+			modulePath := filepath.Join("uploads/affiliate_files", moduleFilename)
+			if err := c.SaveUploadedFile(moduleFile, modulePath); err == nil {
+				title := ""
+				if i < len(fileTitles) {
+					title = fileTitles[i]
+				}
+				if title == "" {
+					title = fmt.Sprintf("Modul %d", i+1)
+				}
+				description := ""
+				if i < len(fileDescriptions) {
+					description = fileDescriptions[i]
+				}
+				uploadedFiles = append(uploadedFiles, uploadedMaterial{Title: title, Description: description, URL: modulePath})
+			}
 		}
 	}
 
 	// Validate: at least one material required
-	if videoURL == "" && fileURL == "" {
+	if len(uploadedVideos) == 0 && len(uploadedFiles) == 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Upload minimal 1 materi (video atau file)"})
 		return
 	}
 
-	// Get user info for full_name and email
+	// Get additional form fields
+	phone := c.PostForm("phone")
+	bankName := c.PostForm("bank_name")
+	bankAccountNumber := c.PostForm("bank_account_number")
+	bankAccountHolder := c.PostForm("bank_account_holder")
+
+	// Validate required contact and bank info
+	if phone == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "No. Telepon wajib diisi"})
+		return
+	}
+	if bankName == "" || bankAccountNumber == "" || bankAccountHolder == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Informasi rekening bank wajib diisi lengkap"})
+		return
+	}
+
+	// Get user info
 	var user struct {
 		Name  string `db:"name"`
 		Email string `db:"email"`
 	}
 	config.DB.Get(&user, `SELECT name, email FROM users WHERE id = ?`, userID)
 
-	// Insert submission
+	// First video/file for backward compatibility with main table
+	var firstVideoURL, firstVideoTitle, firstFileURL, firstFileTitle string
+	if len(uploadedVideos) > 0 {
+		firstVideoURL = uploadedVideos[0].URL
+		firstVideoTitle = uploadedVideos[0].Title
+	}
+	if len(uploadedFiles) > 0 {
+		firstFileURL = uploadedFiles[0].URL
+		firstFileTitle = uploadedFiles[0].Title
+	}
+
+	// ============================================
+	// INSERT INTO affiliate_submissions (PENDING)
+	// ============================================
 	result, err := config.DB.Exec(`
 		INSERT INTO affiliate_submissions 
-		(user_id, full_name, email, event_title, event_description, event_price, 
-		 poster_url, video_url, video_title, file_url, file_title, status)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING')
-	`, userID, user.Name, user.Email, eventTitle, eventDescription, eventPrice,
-		posterURL, videoURL, videoTitle, fileURL, fileTitle)
+		(user_id, full_name, email, phone, event_title, event_description, event_price, 
+		 poster_url, video_url, video_title, file_url, file_title, 
+		 bank_name, bank_account_number, bank_account_holder, status)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING')
+	`, userID, user.Name, user.Email, phone, eventTitle, eventDescription, eventPrice,
+		posterURL, firstVideoURL, firstVideoTitle, firstFileURL, firstFileTitle,
+		bankName, bankAccountNumber, bankAccountHolder)
 
 	if err != nil {
+		fmt.Printf("[SubmitAffiliate] Error creating submission: %v\n", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal menyimpan pengajuan"})
 		return
 	}
 
 	submissionID, _ := result.LastInsertId()
+
+	// Insert all videos into affiliate_submission_videos table
+	for _, video := range uploadedVideos {
+		_, err := config.DB.Exec(`
+			INSERT INTO affiliate_submission_videos (submission_id, title, url)
+			VALUES (?, ?, ?)
+		`, submissionID, video.Title, video.URL)
+		if err != nil {
+			fmt.Printf("[SubmitAffiliate] Error inserting video: %v\n", err)
+		}
+	}
+
+	// Insert all files into affiliate_submission_files table
+	for _, file := range uploadedFiles {
+		_, err := config.DB.Exec(`
+			INSERT INTO affiliate_submission_files (submission_id, title, url)
+			VALUES (?, ?, ?)
+		`, submissionID, file.Title, file.URL)
+		if err != nil {
+			fmt.Printf("[SubmitAffiliate] Error inserting file: %v\n", err)
+		}
+	}
+
+	fmt.Printf("[SubmitAffiliate] ✅ Created submission=%d with %d videos and %d files\n",
+		submissionID, len(uploadedVideos), len(uploadedFiles))
 
 	c.JSON(http.StatusCreated, gin.H{
 		"message":       "Event berhasil diajukan untuk review",

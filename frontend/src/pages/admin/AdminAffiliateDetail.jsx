@@ -6,6 +6,8 @@ export default function AdminAffiliateDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [submission, setSubmission] = useState(null);
+  const [videos, setVideos] = useState([]);
+  const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [reviewNote, setReviewNote] = useState('');
@@ -19,7 +21,20 @@ export default function AdminAffiliateDetail() {
     try {
       setLoading(true);
       const response = await api.get(`/admin/affiliate/submissions/${id}`);
-      setSubmission(response.data.submission);
+      const sub = response.data.submission;
+      setSubmission(sub);
+
+      // Get videos from response (from affiliate_submission_videos)
+      let videosList = response.data.videos || [];
+      setVideos(videosList);
+
+      // Get files from response (from affiliate_submission_files)
+      let filesList = response.data.files || [];
+      setFiles(filesList);
+
+      console.log('Submission data:', sub);
+      console.log('Videos:', videosList);
+      console.log('Files:', filesList);
     } catch (err) {
       setError('Gagal memuat detail pengajuan');
       console.error(err);
@@ -27,6 +42,12 @@ export default function AdminAffiliateDetail() {
       setLoading(false);
     }
   };
+
+  // Helper to get data from submission
+  const getEventTitle = () => submission?.event_title || 'Untitled';
+  const getEventDescription = () => submission?.event_description || '';
+  const getEventPrice = () => submission?.event_price || 0;
+  const getPosterURL = () => submission?.poster_url || null;
 
   const formatPrice = (amount) => {
     return new Intl.NumberFormat('id-ID', {
@@ -45,6 +66,11 @@ export default function AdminAffiliateDetail() {
       hour: '2-digit',
       minute: '2-digit'
     });
+  };
+
+  const getFileExtension = (url) => {
+    if (!url) return '';
+    return url.split('.').pop().toLowerCase();
   };
 
   const handleReview = async (action) => {
@@ -118,7 +144,7 @@ export default function AdminAffiliateDetail() {
       <div className="page-header">
         <Link to="/dashboard/admin/affiliates" className="back-link">← Kembali ke Daftar</Link>
         <div className="header-content">
-          <h1>{submission.event_title}</h1>
+          <h1>{getEventTitle()}</h1>
           {getStatusBadge(submission.status)}
         </div>
       </div>
@@ -128,10 +154,10 @@ export default function AdminAffiliateDetail() {
         <div className="detail-card">
           <h3>📋 Informasi Event</h3>
 
-          {submission.poster_url && (
+          {getPosterURL() && (
             <div className="poster-section">
               <img
-                src={`http://localhost:8080/${submission.poster_url}`}
+                src={`http://localhost:8080/${getPosterURL()}`}
                 alt="Poster"
                 className="poster-image"
               />
@@ -140,29 +166,36 @@ export default function AdminAffiliateDetail() {
 
           <div className="detail-row">
             <span className="label">Judul Event</span>
-            <span className="value">{submission.event_title}</span>
+            <span className="value">{getEventTitle()}</span>
           </div>
           <div className="detail-row">
             <span className="label">Deskripsi</span>
-            <span className="value description">{submission.event_description || '-'}</span>
+            <span className="value description">{getEventDescription() || '-'}</span>
           </div>
           <div className="detail-row">
             <span className="label">Harga</span>
-            <span className="value price">{formatPrice(submission.event_price)}</span>
+            <span className="value price">{formatPrice(getEventPrice())}</span>
           </div>
           <div className="detail-row highlight">
             <span className="label">💰 Platform Fee (10%)</span>
-            <span className="value">{formatPrice(submission.event_price * 0.1)}</span>
+            <span className="value">{formatPrice(getEventPrice() * 0.1)}</span>
           </div>
           <div className="detail-row highlight">
             <span className="label">💵 Affiliate (90%)</span>
-            <span className="value affiliate">{formatPrice(submission.event_price * 0.9)}</span>
+            <span className="value affiliate">{formatPrice(getEventPrice() * 0.9)}</span>
           </div>
         </div>
 
         {/* Right Column - Affiliate Details */}
         <div className="detail-card">
-          <h3>👤 Informasi Pengaju</h3>
+          <div className="section-header">
+            <h3>👤 Informasi Pengaju</h3>
+            {submission.user_id && (
+              <Link to={`/dashboard/admin/users/${submission.user_id}`} className="btn-user-detail">
+                👁️ Detail Pengguna
+              </Link>
+            )}
+          </div>
           <div className="detail-row">
             <span className="label">Nama Lengkap</span>
             <span className="value">{submission.full_name}</span>
@@ -208,6 +241,111 @@ export default function AdminAffiliateDetail() {
             </>
           )}
         </div>
+      </div>
+
+      {/* Materials Section */}
+      <div className="materials-section">
+        <h3>📚 Materi Event</h3>
+
+        {videos.length === 0 && files.length === 0 ? (
+          <div className="empty-materials">
+            <p>Tidak ada materi yang diupload</p>
+          </div>
+        ) : (
+          <div className="materials-grid">
+            {/* Videos */}
+            {videos.length > 0 && (
+              <div className="materials-group">
+                <h4>🎬 Video ({videos.length})</h4>
+                {videos.map((video, index) => (
+                  <div key={video.id || index} className="material-item">
+                    <div className="material-info">
+                      <span className="material-title">{video.title || `Video ${index + 1}`}</span>
+                    </div>
+                    <div className="material-preview">
+                      <video
+                        controls
+                        className="video-player"
+                        src={`http://localhost:8080/${video.url}`}
+                      >
+                        Browser tidak mendukung video
+                      </video>
+                    </div>
+                    <div className="material-actions">
+                      <a
+                        href={`http://localhost:8080/${video.url}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="btn-open"
+                      >
+                        🔗 Buka di Tab Baru
+                      </a>
+                      <a
+                        href={`http://localhost:8080/${video.url}`}
+                        download
+                        className="btn-download"
+                      >
+                        ⬇️ Download
+                      </a>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Files */}
+            {files.length > 0 && (
+              <div className="materials-group">
+                <h4>📄 File/Modul ({files.length})</h4>
+                {files.map((file, index) => {
+                  const ext = getFileExtension(file.url);
+                  const isPDF = ext === 'pdf';
+
+                  return (
+                    <div key={file.id || index} className="material-item">
+                      <div className="material-info">
+                        <span className="material-icon">
+                          {isPDF ? '📕' : ext === 'doc' || ext === 'docx' ? '📘' : ext === 'ppt' || ext === 'pptx' ? '📙' : '📁'}
+                        </span>
+                        <span className="material-title">{file.title || `File ${index + 1}`}</span>
+                        <span className="material-ext">.{ext}</span>
+                      </div>
+
+                      {/* PDF Preview */}
+                      {isPDF && (
+                        <div className="pdf-preview">
+                          <iframe
+                            src={`http://localhost:8080/${file.url}`}
+                            title={file.title || `File ${index + 1}`}
+                            className="pdf-viewer"
+                          />
+                        </div>
+                      )}
+
+                      <div className="material-actions">
+                        <a
+                          href={`http://localhost:8080/${file.url}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="btn-open"
+                        >
+                          🔗 Buka di Tab Baru
+                        </a>
+                        <a
+                          href={`http://localhost:8080/${file.url}`}
+                          download
+                          className="btn-download"
+                        >
+                          ⬇️ Download
+                        </a>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Review Section */}
@@ -323,6 +461,37 @@ export default function AdminAffiliateDetail() {
           font-size: 1.1rem;
         }
 
+        .section-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 1.5rem;
+          padding-bottom: 0.5rem;
+          border-bottom: 2px solid #e2e8f0;
+        }
+
+        .section-header h3 {
+          margin: 0;
+          padding: 0;
+          border: none;
+        }
+
+        .btn-user-detail {
+          padding: 0.5rem 1rem;
+          background: linear-gradient(135deg, #6366f1, #4f46e5);
+          color: white;
+          text-decoration: none;
+          border-radius: 6px;
+          font-size: 0.85rem;
+          font-weight: 500;
+          transition: all 0.2s ease;
+        }
+
+        .btn-user-detail:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+
         .poster-section {
           margin-bottom: 1.5rem;
         }
@@ -383,6 +552,126 @@ export default function AdminAffiliateDetail() {
         .value.affiliate {
           color: #10b981;
           font-weight: 700;
+        }
+
+        /* Materials Section */
+        .materials-section {
+          background: white;
+          border-radius: 12px;
+          padding: 1.5rem;
+          border: 1px solid #e2e8f0;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+          margin-bottom: 2rem;
+        }
+
+        .materials-section h3 {
+          color: #1e40af;
+          margin-bottom: 1.5rem;
+          padding-bottom: 0.5rem;
+          border-bottom: 2px solid #e2e8f0;
+          font-size: 1.1rem;
+        }
+
+        .empty-materials {
+          text-align: center;
+          padding: 2rem;
+          color: #94a3b8;
+        }
+
+        .materials-grid {
+          display: grid;
+          gap: 1.5rem;
+        }
+
+        .materials-group h4 {
+          color: #475569;
+          margin-bottom: 1rem;
+          font-size: 1rem;
+        }
+
+        .material-item {
+          background: #f8fafc;
+          border-radius: 8px;
+          padding: 1rem;
+          margin-bottom: 1rem;
+          border: 1px solid #e2e8f0;
+        }
+
+        .material-info {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          margin-bottom: 0.75rem;
+        }
+
+        .material-icon {
+          font-size: 1.5rem;
+        }
+
+        .material-title {
+          font-weight: 600;
+          color: #1e293b;
+        }
+
+        .material-ext {
+          color: #94a3b8;
+          font-size: 0.85rem;
+        }
+
+        .material-preview {
+          margin-bottom: 0.75rem;
+        }
+
+        .video-player {
+          width: 100%;
+          max-height: 300px;
+          border-radius: 8px;
+          background: #000;
+        }
+
+        .pdf-preview {
+          margin-bottom: 0.75rem;
+        }
+
+        .pdf-viewer {
+          width: 100%;
+          height: 400px;
+          border: 1px solid #e2e8f0;
+          border-radius: 8px;
+        }
+
+        .material-actions {
+          display: flex;
+          gap: 0.75rem;
+          flex-wrap: wrap;
+        }
+
+        .btn-open, .btn-download {
+          padding: 0.5rem 1rem;
+          border-radius: 6px;
+          text-decoration: none;
+          font-size: 0.85rem;
+          font-weight: 500;
+          transition: all 0.2s ease;
+        }
+
+        .btn-open {
+          background: #3b82f6;
+          color: white;
+        }
+
+        .btn-open:hover {
+          background: #2563eb;
+        }
+
+        .btn-download {
+          background: white;
+          color: #374151;
+          border: 1px solid #d1d5db;
+        }
+
+        .btn-download:hover {
+          background: #f3f4f6;
         }
 
         .review-section {
@@ -496,6 +785,14 @@ export default function AdminAffiliateDetail() {
 
           .review-actions {
             flex-direction: column;
+          }
+
+          .material-actions {
+            flex-direction: column;
+          }
+
+          .btn-open, .btn-download {
+            text-align: center;
           }
         }
       `}</style>

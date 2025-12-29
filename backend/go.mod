@@ -10,7 +10,7 @@ require (
 	github.com/joho/godotenv v1.5.1
 	golang.org/x/crypto v0.45.0
 )
- 
+
 require (
 	filippo.io/edwards25519 v1.1.0 // indirect
 	github.com/bytedance/sonic v1.14.0 // indirect
@@ -28,7 +28,7 @@ require (
 	github.com/klauspost/cpuid/v2 v2.3.0 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
-	github.com/midtrans/midtrans-go v1.3.8 // indirect
+	github.com/midtrans/midtrans-go v1.3.8
 	github.com/modern-go/concurrent v0.0.0-20180228061459-e0a39a4cb421 // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.4 // indirect

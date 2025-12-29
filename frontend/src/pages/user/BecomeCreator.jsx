@@ -50,10 +50,13 @@ export default function BecomeCreator() {
                 }
             } catch (e) { }
 
-            // Check profile completeness
+            // Check profile completeness - require all important fields
             const missing = [];
             if (!user.name?.trim()) missing.push("Nama Lengkap");
-            if (!user.email?.trim()) missing.push("Email");
+            if (!user.phone?.trim()) missing.push("No. Telepon");
+            if (!user.address?.trim()) missing.push("Alamat");
+            if (!user.gender) missing.push("Jenis Kelamin");
+            if (!user.birthdate) missing.push("Tanggal Lahir");
 
             if (missing.length > 0) {
                 setProfileIncomplete(true);
@@ -138,15 +141,29 @@ export default function BecomeCreator() {
         return (
             <div style={cardStyle}>
                 <div style={{ fontSize: "4rem", marginBottom: "20px" }}>⚠️</div>
-                <h2 style={{ margin: "0 0 12px 0", color: "#dc2626" }}>Profil Belum Lengkap</h2>
-                <p style={{ color: "#64748b", marginBottom: "20px" }}>Lengkapi profil Anda terlebih dahulu.</p>
+                <h2 style={{ margin: "0 0 12px 0", color: "#dc2626" }}>Lengkapi Profil Pribadi Dulu!</h2>
+                <p style={{ color: "#64748b", marginBottom: "20px" }}>
+                    Untuk menjadi creator (organisasi atau affiliate), Anda harus melengkapi data profil terlebih dahulu untuk verifikasi dan pembayaran.
+                </p>
                 <div style={{ background: "#fef2f2", borderRadius: "10px", padding: "16px", marginBottom: "24px", border: "1px solid #fecaca", textAlign: "left" }}>
-                    <p style={{ margin: "0 0 8px 0", fontWeight: "600", color: "#991b1b" }}>Data yang belum lengkap:</p>
-                    <ul style={{ margin: 0, padding: "0 0 0 20px", color: "#dc2626" }}>
-                        {missingFields.map(field => <li key={field}>{field}</li>)}
-                    </ul>
+                    <p style={{ margin: "0 0 12px 0", fontWeight: "600", color: "#991b1b" }}>📋 Data yang perlu dilengkapi:</p>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                        {missingFields.map(field => (
+                            <span key={field} style={{
+                                background: "white",
+                                color: "#dc2626",
+                                padding: "6px 14px",
+                                borderRadius: "20px",
+                                fontSize: "0.85rem",
+                                fontWeight: "500",
+                                border: "1px solid #fca5a5"
+                            }}>
+                                ❌ {field}
+                            </span>
+                        ))}
+                    </div>
                 </div>
-                <Link to="/dashboard/profile" style={buttonBlue}>👤 Lengkapi Profil</Link>
+                <Link to="/dashboard/profile" style={buttonBlue}>✏️ Lengkapi Profil Sekarang</Link>
             </div>
         );
     }
