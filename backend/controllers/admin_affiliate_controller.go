@@ -186,13 +186,19 @@ func GetAffiliateSubmissionByID(c *gin.Context) {
 	}
 
 	err := config.DB.Get(&submission, `
-		SELECT asub.*, u.name as reviewer_name
+		SELECT asub.id, asub.user_id, asub.full_name, asub.email, asub.phone,
+		       asub.event_title, asub.event_description, asub.event_price,
+		       asub.poster_url, asub.video_url, asub.video_title, asub.file_url, asub.file_title,
+		       asub.bank_name, asub.bank_account_number, asub.bank_account_holder,
+		       asub.status, asub.reviewed_at, asub.review_note, asub.created_at,
+		       u.name as reviewer_name
 		FROM affiliate_submissions asub
 		LEFT JOIN users u ON asub.reviewed_by = u.id
 		WHERE asub.id = ?
 	`, submissionID)
 
 	if err != nil {
+		fmt.Printf("Error loading affiliate submission %s: %v\n", submissionID, err)
 		c.JSON(http.StatusNotFound, gin.H{"error": "Pengajuan tidak ditemukan"})
 		return
 	}
