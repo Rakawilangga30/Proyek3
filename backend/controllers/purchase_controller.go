@@ -90,6 +90,15 @@ func BuySession(c *gin.Context) {
 		var buyerName string
 		config.DB.Get(&buyerName, "SELECT name FROM users WHERE id = ?", userID)
 
+		// Notify buyer (user) about successful purchase
+		CreateNotification(
+			userID,
+			"purchase_success",
+			"✅ Pembelian Berhasil!",
+			"Anda berhasil membeli sesi \""+sessionInfo.SessionTitle+"\" dari event \""+sessionInfo.EventTitle+"\". Selamat belajar!",
+		)
+
+		// Notify organization owner about new purchase
 		if sessionInfo.OwnerID > 0 {
 			CreateNotification(
 				sessionInfo.OwnerID,

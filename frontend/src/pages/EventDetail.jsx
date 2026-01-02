@@ -4,6 +4,7 @@ import api from "../api";
 import QuizTaker from "../components/QuizTaker";
 import CertificateViewer from "../components/CertificateViewer";
 import SecureVideoPlayer from "../components/SecureVideoPlayer";
+import SecureDocumentViewer from "../components/SecureDocumentViewer";
 import PurchaseButton from "../components/PurchaseButton";
 
 export default function EventDetail() {
@@ -18,6 +19,7 @@ export default function EventDetail() {
     const [selectedSessionMedia, setSelectedSessionMedia] = useState(null);
     const [activeVideoUrl, setActiveVideoUrl] = useState(null);
     const [expandedMediaId, setExpandedMediaId] = useState(null);
+    const [activeDocument, setActiveDocument] = useState(null); // For secure document viewer
 
     // Quiz & Certificate
     const [quizSessionId, setQuizSessionId] = useState(null);
@@ -138,13 +140,14 @@ export default function EventDetail() {
         }
     };
 
-    const handleOpenFile = async (fileUrl) => {
+    const handleOpenFile = async (fileUrl, fileTitle) => {
         if (!fileUrl) return alert("URL file tidak valid!");
         try {
             const filename = fileUrl.split(/[/\\]/).pop();
             const res = await api.get(`/user/sessions/signed-file/${filename}`);
             const fullUrl = `http://localhost:8080${res.data.url}`;
-            window.open(fullUrl, '_blank');
+            // Open in secure document viewer instead of new tab
+            setActiveDocument({ url: fullUrl, title: fileTitle || filename });
         } catch (error) {
             alert("Gagal memuat file!");
         }
@@ -639,7 +642,7 @@ export default function EventDetail() {
                                                         {f.description || 'Tidak ada deskripsi.'}
                                                     </p>
                                                     <button
-                                                        onClick={() => handleOpenFile(f.file_url)}
+                                                        onClick={() => handleOpenFile(f.file_url, f.title)}
                                                         style={{
                                                             background: "linear-gradient(135deg, #f59e0b, #d97706)",
                                                             color: "white",
@@ -678,6 +681,15 @@ export default function EventDetail() {
                 <CertificateViewer
                     eventId={id}
                     onClose={() => setShowCertificate(false)}
+                />
+            )}
+
+            {/* Secure Document Viewer Modal */}
+            {activeDocument && (
+                <SecureDocumentViewer
+                    src={activeDocument.url}
+                    title={activeDocument.title}
+                    onClose={() => setActiveDocument(null)}
                 />
             )}
         </div>

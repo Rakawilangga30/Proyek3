@@ -515,7 +515,34 @@ export default function MyOrganization() {
                 )}
             </div>
 
-            {/* Create Event Modal */}
+            {/* Quick Actions Section */}
+            <div style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+                gap: "16px",
+                marginBottom: "24px"
+            }}>
+                <Link to="/dashboard/org/report" style={quickActionStyle}>
+                    <div style={{ fontSize: "2rem", marginBottom: "8px" }}>📊</div>
+                    <h4 style={{ margin: "0 0 4px 0", color: "#1e293b", fontSize: "1rem" }}>Lihat Laporan</h4>
+                    <p style={{ margin: 0, color: "#64748b", fontSize: "0.8rem" }}>Pantau penjualan & pendapatan</p>
+                </Link>
+                <Link to="/dashboard/org/withdraw" style={quickActionStyle}>
+                    <div style={{ fontSize: "2rem", marginBottom: "8px" }}>💸</div>
+                    <h4 style={{ margin: "0 0 4px 0", color: "#1e293b", fontSize: "1rem" }}>Tarik Dana</h4>
+                    <p style={{ margin: 0, color: "#64748b", fontSize: "0.8rem" }}>Cairkan pendapatan Anda</p>
+                </Link>
+                <Link to="/dashboard/notifications" style={quickActionStyle}>
+                    <div style={{ fontSize: "2rem", marginBottom: "8px" }}>🔔</div>
+                    <h4 style={{ margin: "0 0 4px 0", color: "#1e293b", fontSize: "1rem" }}>Notifikasi</h4>
+                    <p style={{ margin: 0, color: "#64748b", fontSize: "0.8rem" }}>Lihat pesan & update</p>
+                </Link>
+                <Link to="/dashboard/profile" style={quickActionStyle}>
+                    <div style={{ fontSize: "2rem", marginBottom: "8px" }}>👤</div>
+                    <h4 style={{ margin: "0 0 4px 0", color: "#1e293b", fontSize: "1rem" }}>Profil Saya</h4>
+                    <p style={{ margin: 0, color: "#64748b", fontSize: "0.8rem" }}>Edit data profil</p>
+                </Link>
+            </div>
             {showCreate && (
                 <div style={{
                     position: "fixed",

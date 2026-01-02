@@ -92,6 +92,9 @@ export default function Sidebar() {
         <MenuItem to="/dashboard" label="Dashboard" icon="🏠" />
         <MenuItem to="/dashboard/profile" label="Profil Saya" icon="👤" />
         <MenuItem to="/dashboard/my-courses" label="Kursus Saya" icon="📚" />
+        <MenuItem to="/dashboard/certificates" label="Sertifikat" icon="🎓" />
+        <MenuItem to="/dashboard/payments" label="Pembayaran" icon="💳" />
+        <MenuItem to="/dashboard/notifications" label="Notifikasi" icon="🔔" />
 
         {/* Jadi Creator - Only show for regular users (not ORGANIZER, AFFILIATE, or ADMIN) */}
         {!roles.includes("ORGANIZER") && !roles.includes("AFFILIATE") && !roles.includes("ADMIN") && (
@@ -119,15 +122,15 @@ export default function Sidebar() {
           </>
         )}
 
-        {/* ADMIN Menu */}
+        {/* ADMIN Menu - Ordered by priority */}
         {roles.includes("ADMIN") && (
           <>
             <SectionTitle>Admin Area</SectionTitle>
-            <MenuItem to="/dashboard/admin/users" label="Kelola User" icon="👥" />
+            <MenuItem to="/dashboard/admin/official-org" label="Official Org" icon="🏛️" />
             <MenuItem to="/dashboard/admin/organizations" label="Kelola Organisasi" icon="🏢" />
             <MenuItem to="/dashboard/admin/approvals" label="Persetujuan Org" icon="📝" />
             <MenuItem to="/dashboard/admin/affiliates" label="Pengajuan Affiliate" icon="🤝" />
-            <MenuItem to="/dashboard/admin/official-org" label="Official Org" icon="🏛️" />
+            <MenuItem to="/dashboard/admin/users" label="Kelola User" icon="👥" />
             <MenuItem to="/dashboard/admin/featured" label="Featured Banner" icon="⭐" />
             <MenuItem to="/dashboard/admin/reports" label="Kelola Laporan" icon="📢" />
           </>

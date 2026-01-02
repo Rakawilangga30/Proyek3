@@ -3,13 +3,11 @@ FINISHINNGGG
 
 Fitur yang perlu di buat dan perbaiki
 
-fitur utama
 - notifikasi
 perbaiki semua aktifitas ya bu notifikasi lain lain untuk admin user dan org yang kaya gitulah 
 perbaiki ya
-- fitur keamanan bahan materi 💎
-fitur keamananya untuk bagian materi modul karena masih bisa di download
 
-fitur pending
 - tombol cepat di dashboard
 lengkapin semua masing masing dashboard bagian tombol cepatnya
+
+okei saya lupa yaitu side bar untukmelihat list sertifikat dan juga list pembayaran kaya buat di batalkan atau melanjutkan pembayaran

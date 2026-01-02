@@ -250,6 +250,22 @@ export default function AffiliateDashboard() {
                         Saldo: {formatPrice(balance?.available_balance || 0)}
                     </p>
                 </Link>
+
+                <Link to="/dashboard/notifications" style={actionCard}>
+                    <div style={{ fontSize: "2.5rem", marginBottom: "12px" }}>🔔</div>
+                    <h3 style={{ margin: "0 0 8px 0", color: "#1e293b" }}>Notifikasi</h3>
+                    <p style={{ margin: 0, color: "#64748b", fontSize: "0.9rem" }}>
+                        Lihat update & pesan
+                    </p>
+                </Link>
+
+                <Link to="/dashboard/profile" style={actionCard}>
+                    <div style={{ fontSize: "2.5rem", marginBottom: "12px" }}>👤</div>
+                    <h3 style={{ margin: "0 0 8px 0", color: "#1e293b" }}>Profil Saya</h3>
+                    <p style={{ margin: 0, color: "#64748b", fontSize: "0.9rem" }}>
+                        Edit data profil
+                    </p>
+                </Link>
             </div>
         </div>
     );

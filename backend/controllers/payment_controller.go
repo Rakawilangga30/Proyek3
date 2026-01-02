@@ -168,6 +168,9 @@ func GetPaymentToken(c *gin.Context) {
 		return
 	}
 
+	// Save snap_token to purchase record for later use (continue payment)
+	config.DB.Exec(`UPDATE purchases SET snap_token = ? WHERE order_id = ?`, snapResp.Token, orderID)
+
 	c.JSON(http.StatusOK, gin.H{
 		"token":        snapResp.Token,
 		"redirect_url": snapResp.RedirectURL,

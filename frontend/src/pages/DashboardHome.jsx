@@ -147,24 +147,101 @@ export default function DashboardHome() {
                     gap: "12px"
                 }}>
                     <QuickActionButton
-                        label="Lihat Kursus"
+                        label="Jelajahi Event"
+                        href="/"
+                        icon="🔍"
+                        primary
+                    />
+                    <QuickActionButton
+                        label="Kursus Saya"
                         href="/dashboard/my-courses"
                         icon="📚"
+                    />
+                    <QuickActionButton
+                        label="Notifikasi"
+                        href="/dashboard/notifications"
+                        icon="🔔"
                     />
                     <QuickActionButton
                         label="Edit Profil"
                         href="/dashboard/profile"
                         icon="👤"
                     />
+                    <QuickActionButton
+                        label="Laporkan Masalah"
+                        href="/dashboard/reports/create"
+                        icon="📝"
+                    />
                     {user.roles?.includes("ORGANIZER") && (
                         <QuickActionButton
-                            label="Buat Event"
-                            href="/dashboard/org/create-event"
-                            icon="➕"
-                            primary
+                            label="Kelola Organisasi"
+                            href="/dashboard/org"
+                            icon="🏢"
+                        />
+                    )}
+                    {user.roles?.includes("AFFILIATE") && (
+                        <QuickActionButton
+                            label="Dashboard Affiliate"
+                            href="/dashboard/affiliate"
+                            icon="🤝"
                         />
                     )}
                 </div>
+
+                {/* Admin Quick Actions */}
+                {user.roles?.includes("ADMIN") && (
+                    <>
+                        <h3 style={{
+                            margin: "24px 0 16px 0",
+                            color: "#1e293b",
+                            fontSize: "1.1rem"
+                        }}>
+                            🛡️ Admin Area
+                        </h3>
+                        <div style={{
+                            display: "grid",
+                            gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+                            gap: "12px"
+                        }}>
+                            <QuickActionButton
+                                label="Official Org"
+                                href="/dashboard/admin/official-org"
+                                icon="🏛️"
+                                primary
+                            />
+                            <QuickActionButton
+                                label="Kelola Organisasi"
+                                href="/dashboard/admin/organizations"
+                                icon="🏢"
+                            />
+                            <QuickActionButton
+                                label="Persetujuan Org"
+                                href="/dashboard/admin/approvals"
+                                icon="📝"
+                            />
+                            <QuickActionButton
+                                label="Pengajuan Affiliate"
+                                href="/dashboard/admin/affiliates"
+                                icon="🤝"
+                            />
+                            <QuickActionButton
+                                label="Kelola User"
+                                href="/dashboard/admin/users"
+                                icon="👥"
+                            />
+                            <QuickActionButton
+                                label="Featured Banner"
+                                href="/dashboard/admin/featured"
+                                icon="⭐"
+                            />
+                            <QuickActionButton
+                                label="Kelola Laporan"
+                                href="/dashboard/admin/reports"
+                                icon="📢"
+                            />
+                        </div>
+                    </>
+                )}
             </div>
         </div>
     );

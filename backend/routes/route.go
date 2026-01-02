@@ -64,6 +64,11 @@ func RegisterRoutes(r *gin.Engine) {
 		userGroup.POST("/payment/check-status", controllers.CheckPaymentStatus)
 		userGroup.POST("/payment/simulate-success", controllers.SimulatePaymentSuccess)
 
+		// Certificates & Payments History
+		userGroup.GET("/certificates", controllers.GetMyCertificates)
+		userGroup.GET("/payments", controllers.GetMyPayments)
+		userGroup.PUT("/payments/:id/cancel", controllers.CancelPayment)
+
 		// Quiz & Certificate for users
 		userGroup.GET("/events/:eventID/progress", controllers.GetUserEventProgress)
 		userGroup.GET("/sessions/:sessionID/quiz", controllers.GetQuizForUser)

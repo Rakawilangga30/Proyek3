@@ -17,6 +17,8 @@ import OrganizationPublic from "./pages/OrganizationPublic";
 import DashboardHome from "./pages/DashboardHome";
 import UserProfile from "./pages/user/UserProfile";
 import MyCourses from "./pages/user/MyCourses";
+import MyCertificates from "./pages/user/MyCertificates";
+import MyPayments from "./pages/user/MyPayments";
 import BecomeCreator from "./pages/user/BecomeCreator";
 import Notifications from "./pages/user/Notifications";
 
@@ -68,6 +70,8 @@ function App() {
           <Route index element={<DashboardHome />} />
           <Route path="profile" element={<UserProfile />} />
           <Route path="my-courses" element={<MyCourses />} />
+          <Route path="certificates" element={<MyCertificates />} />
+          <Route path="payments" element={<MyPayments />} />
           <Route path="become-creator" element={<BecomeCreator />} />
           <Route path="notifications" element={<Notifications />} />
 
