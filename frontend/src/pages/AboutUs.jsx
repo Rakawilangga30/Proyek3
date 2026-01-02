@@ -2,9 +2,9 @@ import { Link } from 'react-router-dom';
 
 export default function AboutUs() {
     const team = [
-        { name: "Nama Anggota 1", role: "Developer", photo: null },
-        { name: "Nama Anggota 2", role: "Developer", photo: null },
-        { name: "Nama Anggota 3", role: "Developer", photo: null },
+        { name: "Galuh Sanjaya Putra", role: "Developer", photo: null },
+        { name: "Ananda Raka Aditya Wilangga", role: "Developer", photo: null },
+        { name: "Pak Cahyo", role: "Pembimbing", photo: null },
     ];
 
     return (

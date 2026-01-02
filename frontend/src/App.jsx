@@ -11,6 +11,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import AboutUs from "./pages/AboutUs";
 import Report from "./pages/Report";
+import OrganizationPublic from "./pages/OrganizationPublic";
 
 // PROTECTED PAGES - User
 import DashboardHome from "./pages/DashboardHome";
@@ -46,6 +47,7 @@ import AdminAffiliateLedgers from "./pages/admin/AdminAffiliateLedgers";
 import AdminOfficialOrg from "./pages/admin/AdminOfficialOrg";
 import AdminOfficialOrgEventDetail from "./pages/admin/AdminOfficialOrgEventDetail";
 import AdminReports from "./pages/admin/AdminReports";
+import AdminFeaturedEvents from "./pages/admin/AdminFeaturedEvents";
 
 function App() {
   return (
@@ -56,6 +58,7 @@ function App() {
         <Route path="/event/:id" element={<><Navbar /><EventDetail /></>} />
         <Route path="/about" element={<><Navbar /><AboutUs /></>} />
         <Route path="/report" element={<><Navbar /><Report /></>} />
+        <Route path="/organization/:id" element={<><Navbar /><OrganizationPublic /></>} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
 
@@ -96,6 +99,7 @@ function App() {
           <Route path="admin/official-org" element={<AdminOfficialOrg />} />
           <Route path="admin/official-org/events/:eventId" element={<AdminOfficialOrgEventDetail />} />
           <Route path="admin/reports" element={<AdminReports />} />
+          <Route path="admin/featured" element={<AdminFeaturedEvents />} />
         </Route>
 
         {/* 404 */}

@@ -8,6 +8,18 @@ export default function UserList() {
     const [error, setError] = useState(null);
     const [showCreate, setShowCreate] = useState(false);
     const [newUser, setNewUser] = useState({ name: "", email: "", password: "", role: "USER", admin_level: 2, org_name: "" });
+    const [searchQuery, setSearchQuery] = useState("");
+
+    // Filter users based on search query
+    const filteredUsers = users.filter(u => {
+        if (!searchQuery.trim()) return true;
+        const q = searchQuery.toLowerCase();
+        return (
+            u.name?.toLowerCase().includes(q) ||
+            u.email?.toLowerCase().includes(q) ||
+            u.phone?.toLowerCase().includes(q)
+        );
+    });
 
     useEffect(() => {
         fetchUsers();
@@ -116,6 +128,55 @@ export default function UserList() {
                 </div>
             </div>
 
+            {/* Search Bar */}
+            <div style={{
+                background: "white",
+                borderRadius: "12px",
+                padding: "16px 20px",
+                marginBottom: "20px",
+                boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
+                border: "1px solid #e2e8f0"
+            }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                    <span style={{ fontSize: "1.2rem" }}>🔍</span>
+                    <input
+                        type="text"
+                        placeholder="Cari user berdasarkan nama, email, atau nomor telepon..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        style={{
+                            flex: 1,
+                            padding: "12px 16px",
+                            border: "1px solid #e2e8f0",
+                            borderRadius: "8px",
+                            fontSize: "0.95rem",
+                            outline: "none"
+                        }}
+                    />
+                    {searchQuery && (
+                        <button
+                            onClick={() => setSearchQuery("")}
+                            style={{
+                                padding: "8px 16px",
+                                background: "#f1f5f9",
+                                border: "none",
+                                borderRadius: "8px",
+                                cursor: "pointer",
+                                fontSize: "0.85rem",
+                                color: "#64748b"
+                            }}
+                        >
+                            ✕ Clear
+                        </button>
+                    )}
+                </div>
+                {searchQuery && (
+                    <div style={{ marginTop: "10px", fontSize: "0.85rem", color: "#64748b" }}>
+                        Menampilkan {filteredUsers.length} dari {users.length} user
+                    </div>
+                )}
+            </div>
+
             {/* Error Alert */}
             {error && (
                 <div style={{
@@ -164,14 +225,14 @@ export default function UserList() {
                                 </tr>
                             </thead>
                             <tbody>
-                                {users.length === 0 ? (
+                                {filteredUsers.length === 0 ? (
                                     <tr>
                                         <td colSpan="5" style={{ padding: "40px", textAlign: "center", color: "#64748b" }}>
-                                            Tidak ada data user.
+                                            {searchQuery ? `Tidak ada user yang cocok dengan "${searchQuery}"` : "Tidak ada data user."}
                                         </td>
                                     </tr>
                                 ) : (
-                                    users.map(u => (
+                                    filteredUsers.map(u => (
                                         <tr key={u.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
                                             <td style={tdStyle}>
                                                 <span style={{

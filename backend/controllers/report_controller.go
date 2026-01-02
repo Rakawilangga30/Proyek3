@@ -76,6 +76,7 @@ func GetReports(c *gin.Context) {
 		ID          int64   `db:"id" json:"id"`
 		UserID      *int64  `db:"user_id" json:"user_id"`
 		UserName    *string `db:"user_name" json:"user_name"`
+		UserEmail   *string `db:"user_email" json:"user_email"`
 		Category    string  `db:"category" json:"category"`
 		Subject     string  `db:"subject" json:"subject"`
 		Description string  `db:"description" json:"description"`
@@ -86,7 +87,7 @@ func GetReports(c *gin.Context) {
 	}
 
 	err := config.DB.Select(&reports, `
-		SELECT r.id, r.user_id, u.name as user_name, r.category, r.subject, 
+		SELECT r.id, r.user_id, u.name as user_name, u.email as user_email, r.category, r.subject, 
 		       r.description, r.photo_url, r.status, r.admin_notes, r.created_at
 		FROM reports r
 		LEFT JOIN users u ON r.user_id = u.id

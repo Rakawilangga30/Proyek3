@@ -22,12 +22,18 @@ func GetPublicOrganizations(c *gin.Context) {
 		Description *string `db:"description" json:"description"`
 		Category    *string `db:"category" json:"category"`
 		LogoURL     *string `db:"logo_url" json:"logo_url"`
+		Email       *string `db:"email" json:"email"`
+		Phone       *string `db:"phone" json:"phone"`
+		Website     *string `db:"website" json:"website"`
+		SocialLink  *string `db:"social_link" json:"social_link"`
+		Address     *string `db:"address" json:"address"`
 		EventCount  int     `db:"event_count" json:"event_count"`
 	}
 
 	err := config.DB.Select(&organizations, `
 		SELECT o.id, o.name, o.description, o.category, o.logo_url,
-			(SELECT COUNT(*) FROM events e WHERE e.organization_id = o.id AND e.is_published = 1) as event_count
+			o.email, o.phone, o.website, o.social_link, o.address,
+			(SELECT COUNT(*) FROM events e WHERE e.organization_id = o.id AND e.publish_status = 'PUBLISHED') as event_count
 		FROM organizations o
 		ORDER BY event_count DESC, o.name ASC
 		LIMIT 50

@@ -6,25 +6,18 @@ export default function AdminAffiliateLedgers() {
   const [ledgers, setLedgers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [filter, setFilter] = useState('');
-  const [totals, setTotals] = useState({ pending: 0, paid_out: 0 });
   const [stats, setStats] = useState(null);
 
   useEffect(() => {
     fetchLedgers();
     fetchStats();
-  }, [filter]);
+  }, []);
 
   const fetchLedgers = async () => {
     try {
       setLoading(true);
-      const params = filter ? `?is_paid_out=${filter}` : '';
-      const response = await api.get(`/admin/affiliate/ledgers${params}`);
+      const response = await api.get('/admin/affiliate/ledgers');
       setLedgers(response.data.ledgers || []);
-      setTotals({
-        pending: response.data.total_pending || 0,
-        paid_out: response.data.total_paid_out || 0
-      });
     } catch (err) {
       setError('Gagal memuat data ledger');
       console.error(err);
@@ -58,18 +51,7 @@ export default function AdminAffiliateLedgers() {
     });
   };
 
-  const handlePayout = async (ledgerId) => {
-    if (!window.confirm('Tandai pembayaran ini sebagai sudah dibayar?')) return;
 
-    try {
-      await api.post(`/admin/affiliate/ledgers/${ledgerId}/payout`);
-      alert('Berhasil ditandai sebagai sudah dibayar');
-      fetchLedgers();
-      fetchStats();
-    } catch (err) {
-      alert(err.response?.data?.error || 'Gagal memproses payout');
-    }
-  };
 
   return (
     <div className="ledgers-page">
@@ -90,38 +72,14 @@ export default function AdminAffiliateLedgers() {
             <div className="stat-number">{formatPrice(stats.total_platform_fee)}</div>
             <div className="stat-label">Platform Fee (10%)</div>
           </div>
-          <div className="stat-card pending">
-            <div className="stat-number">{formatPrice(stats.pending_payout)}</div>
-            <div className="stat-label">Menunggu Pembayaran</div>
-          </div>
           <div className="stat-card paid">
-            <div className="stat-number">{formatPrice(stats.completed_payout)}</div>
-            <div className="stat-label">Sudah Dibayar</div>
+            <div className="stat-number">{formatPrice(stats.total_revenue - stats.total_platform_fee)}</div>
+            <div className="stat-label">Total Affiliate (90%)</div>
           </div>
         </div>
       )}
 
-      {/* Filter Tabs */}
-      <div className="filter-tabs">
-        <button
-          className={`tab ${filter === '' ? 'active' : ''}`}
-          onClick={() => setFilter('')}
-        >
-          Semua
-        </button>
-        <button
-          className={`tab ${filter === 'false' ? 'active' : ''}`}
-          onClick={() => setFilter('false')}
-        >
-          Belum Dibayar
-        </button>
-        <button
-          className={`tab ${filter === 'true' ? 'active' : ''}`}
-          onClick={() => setFilter('true')}
-        >
-          Sudah Dibayar
-        </button>
-      </div>
+
 
       {error && <div className="error-message">{error}</div>}
 
@@ -143,9 +101,7 @@ export default function AdminAffiliateLedgers() {
                 <th>Total</th>
                 <th>Platform (10%)</th>
                 <th>Affiliate (90%)</th>
-                <th>Status</th>
                 <th>Tanggal</th>
-                <th>Aksi</th>
               </tr>
             </thead>
             <tbody>
@@ -162,27 +118,7 @@ export default function AdminAffiliateLedgers() {
                   <td>{formatPrice(ledger.transaction_amount)}</td>
                   <td className="platform-fee">{formatPrice(ledger.platform_fee)}</td>
                   <td className="affiliate-amount">{formatPrice(ledger.affiliate_amount)}</td>
-                  <td>
-                    {ledger.is_paid_out ? (
-                      <span className="badge paid">✅ Dibayar</span>
-                    ) : (
-                      <span className="badge pending">⏳ Pending</span>
-                    )}
-                  </td>
                   <td>{formatDate(ledger.created_at)}</td>
-                  <td>
-                    {!ledger.is_paid_out && (
-                      <button
-                        className="payout-btn"
-                        onClick={() => handlePayout(ledger.id)}
-                      >
-                        💳 Bayar
-                      </button>
-                    )}
-                    {ledger.is_paid_out && ledger.paid_out_at && (
-                      <span className="paid-date">{formatDate(ledger.paid_out_at)}</span>
-                    )}
-                  </td>
                 </tr>
               ))}
             </tbody>

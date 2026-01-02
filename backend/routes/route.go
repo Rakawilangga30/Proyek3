@@ -28,7 +28,7 @@ func RegisterRoutes(r *gin.Engine) {
 
 		// Public endpoints
 		api.GET("/organizations/public", controllers.GetPublicOrganizations)
-		api.POST("/reports", controllers.SubmitReport)
+		api.GET("/featured-events", controllers.GetFeaturedEvents)
 
 		// SANDBOX ONLY - Public endpoint for testing payment
 		api.POST("/sandbox/simulate-payment", controllers.SimulatePaymentSuccess)
@@ -69,6 +69,9 @@ func RegisterRoutes(r *gin.Engine) {
 		userGroup.GET("/sessions/:sessionID/quiz", controllers.GetQuizForUser)
 		userGroup.POST("/sessions/:sessionID/quiz/submit", controllers.SubmitQuiz)
 		userGroup.GET("/events/:eventID/certificate", controllers.GetUserCertificate)
+
+		// Reports/Pengaduan
+		userGroup.POST("/reports", controllers.SubmitReport)
 	}
 
 	// ==========================================
@@ -238,5 +241,13 @@ func RegisterRoutes(r *gin.Engine) {
 		// Reports Management
 		admin.GET("/reports", controllers.GetReports)
 		admin.PUT("/reports/:id", controllers.UpdateReportStatus)
+
+		// Featured Events Management
+		admin.GET("/featured-events", controllers.AdminGetFeaturedEvents)
+		admin.GET("/featured-events/available", controllers.AdminGetAvailableEvents)
+		admin.POST("/featured-events", controllers.AdminAddFeaturedEvent)
+		admin.DELETE("/featured-events/:id", controllers.AdminRemoveFeaturedEvent)
+		admin.PUT("/featured-events/reorder", controllers.AdminReorderFeaturedEvents)
+		admin.PUT("/featured-events/:id/order", controllers.AdminUpdateFeaturedOrder)
 	}
 }

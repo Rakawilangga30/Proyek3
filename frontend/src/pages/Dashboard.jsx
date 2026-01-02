@@ -1,31 +1,44 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import api from "../api";
 
 export default function Dashboard() {
     const [events, setEvents] = useState([]);
     const [upcoming, setUpcoming] = useState([]);
     const [featuredEvents, setFeaturedEvents] = useState([]);
-    const [organizations, setOrganizations] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [searchQuery, setSearchQuery] = useState("");
-    const [searchType, setSearchType] = useState("event"); // event or org
-    const [searchResults, setSearchResults] = useState([]);
-    const [showResults, setShowResults] = useState(false);
     const [currentSlide, setCurrentSlide] = useState(0);
-    const navigate = useNavigate();
 
     useEffect(() => {
         const fetchEvents = async () => {
             try {
-                const [eventsRes, orgsRes] = await Promise.all([
+                // Fetch regular events and featured events separately
+                const [eventsRes, featuredRes] = await Promise.all([
                     api.get("/events"),
-                    api.get("/organizations/public").catch(() => ({ data: { organizations: [] } }))
+                    api.get("/featured-events").catch(() => ({ data: { featured: [] } }))
                 ]);
+
                 setEvents(eventsRes.data.events || []);
                 setUpcoming(eventsRes.data.upcoming || []);
-                setFeaturedEvents(eventsRes.data.featured || eventsRes.data.events?.slice(0, 5) || []);
-                setOrganizations(orgsRes.data.organizations || []);
+
+                // Use featured from admin selection, fallback to first 5 events
+                const featured = featuredRes.data.featured || [];
+                if (featured.length > 0) {
+                    // Map featured events to match expected format
+                    const mappedFeatured = featured.map(f => ({
+                        id: f.event_id,
+                        title: f.title,
+                        description: f.description,
+                        category: f.category,
+                        thumbnail_url: f.thumbnail_url,
+                        organization_id: f.organization_id,
+                        org_name: f.org_name
+                    }));
+                    setFeaturedEvents(mappedFeatured);
+                } else {
+                    // Fallback to first 5 regular events
+                    setFeaturedEvents((eventsRes.data.events || []).slice(0, 5));
+                }
             } catch (error) {
                 console.error("Gagal load events:", error);
             } finally {
@@ -45,29 +58,13 @@ export default function Dashboard() {
         }
     }, [featuredEvents.length]);
 
-    const handleSearch = (e) => {
-        const query = e.target.value;
-        setSearchQuery(query);
-
-        if (query.length >= 2) {
-            if (searchType === "event") {
-                const filtered = events.filter(evt =>
-                    evt.title.toLowerCase().includes(query.toLowerCase()) ||
-                    (evt.description || "").toLowerCase().includes(query.toLowerCase()) ||
-                    (evt.category || "").toLowerCase().includes(query.toLowerCase())
-                );
-                setSearchResults(filtered);
-            } else {
-                const filtered = organizations.filter(org =>
-                    org.name.toLowerCase().includes(query.toLowerCase()) ||
-                    (org.category || "").toLowerCase().includes(query.toLowerCase())
-                );
-                setSearchResults(filtered);
-            }
-            setShowResults(true);
-        } else {
-            setShowResults(false);
-        }
+    // Helper to properly format thumbnail URLs
+    const getThumbnailUrl = (url) => {
+        if (!url) return null;
+        // Clean up the URL - remove any leading slashes and ensure proper format
+        let cleanUrl = url.replace(/^\/+/, '').replace(/\\/g, '/');
+        // Ensure there's a slash between base and path
+        return `http://localhost:8080/${cleanUrl}`;
     };
 
     const formatDate = (dateString) => {
@@ -106,167 +103,6 @@ export default function Dashboard() {
             minHeight: "100vh"
         }}>
 
-            {/* HERO BANNER WITH SEARCH */}
-            <div style={{
-                background: "linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #60a5fa 100%)",
-                color: "white",
-                padding: "48px 40px",
-                borderRadius: "16px",
-                marginBottom: "32px",
-                boxShadow: "0 10px 15px -3px rgba(59, 130, 246, 0.3)",
-                position: "relative",
-                overflow: "hidden"
-            }}>
-                <div style={{
-                    position: "absolute",
-                    top: "-50%",
-                    right: "-10%",
-                    width: "300px",
-                    height: "300px",
-                    background: "rgba(255,255,255,0.1)",
-                    borderRadius: "50%"
-                }}></div>
-                <div style={{
-                    position: "absolute",
-                    bottom: "-30%",
-                    left: "20%",
-                    width: "200px",
-                    height: "200px",
-                    background: "rgba(255,255,255,0.05)",
-                    borderRadius: "50%"
-                }}></div>
-                <div style={{ position: "relative", zIndex: 1 }}>
-                    <h1 style={{ margin: "0 0 12px 0", fontSize: "2.25rem", fontWeight: "700" }}>
-                        Selamat Datang di Learning Platform
-                    </h1>
-                    <p style={{ fontSize: "1.1rem", opacity: 0.9, margin: "0 0 24px 0", maxWidth: "600px" }}>
-                        Tingkatkan skillmu dengan materi terbaik dari para ahli.
-                    </p>
-
-                    {/* SEARCH BAR */}
-                    <div style={{ position: "relative", maxWidth: "600px" }}>
-                        <div style={{ display: "flex", gap: "8px", marginBottom: "12px" }}>
-                            <button
-                                onClick={() => { setSearchType("event"); setSearchResults([]); setSearchQuery(""); }}
-                                style={{
-                                    padding: "8px 16px",
-                                    background: searchType === "event" ? "white" : "rgba(255,255,255,0.2)",
-                                    color: searchType === "event" ? "#3b82f6" : "white",
-                                    border: "none",
-                                    borderRadius: "20px",
-                                    cursor: "pointer",
-                                    fontWeight: "600",
-                                    fontSize: "0.85rem"
-                                }}
-                            >
-                                🎓 Cari Event
-                            </button>
-                            <button
-                                onClick={() => { setSearchType("org"); setSearchResults([]); setSearchQuery(""); }}
-                                style={{
-                                    padding: "8px 16px",
-                                    background: searchType === "org" ? "white" : "rgba(255,255,255,0.2)",
-                                    color: searchType === "org" ? "#3b82f6" : "white",
-                                    border: "none",
-                                    borderRadius: "20px",
-                                    cursor: "pointer",
-                                    fontWeight: "600",
-                                    fontSize: "0.85rem"
-                                }}
-                            >
-                                🏢 Cari Organisasi
-                            </button>
-                        </div>
-                        <div style={{ position: "relative" }}>
-                            <input
-                                type="text"
-                                placeholder={searchType === "event" ? "Cari event atau materi..." : "Cari organisasi..."}
-                                value={searchQuery}
-                                onChange={handleSearch}
-                                onFocus={() => searchQuery.length >= 2 && setShowResults(true)}
-                                onBlur={() => setTimeout(() => setShowResults(false), 200)}
-                                style={{
-                                    width: "100%",
-                                    padding: "14px 20px",
-                                    paddingLeft: "48px",
-                                    borderRadius: "12px",
-                                    border: "none",
-                                    fontSize: "1rem",
-                                    boxShadow: "0 4px 6px rgba(0,0,0,0.1)"
-                                }}
-                            />
-                            <span style={{
-                                position: "absolute",
-                                left: "16px",
-                                top: "50%",
-                                transform: "translateY(-50%)",
-                                fontSize: "1.2rem"
-                            }}>🔍</span>
-                        </div>
-
-                        {/* Search Results Dropdown */}
-                        {showResults && searchResults.length > 0 && (
-                            <div style={{
-                                position: "absolute",
-                                top: "100%",
-                                left: 0,
-                                right: 0,
-                                background: "white",
-                                borderRadius: "12px",
-                                boxShadow: "0 10px 25px rgba(0,0,0,0.15)",
-                                marginTop: "8px",
-                                maxHeight: "300px",
-                                overflowY: "auto",
-                                zIndex: 100
-                            }}>
-                                {searchResults.map((item, idx) => (
-                                    <Link
-                                        key={idx}
-                                        to={searchType === "event" ? `/event/${item.id}` : `/organization/${item.id}`}
-                                        style={{
-                                            display: "flex",
-                                            alignItems: "center",
-                                            gap: "12px",
-                                            padding: "12px 16px",
-                                            borderBottom: "1px solid #e2e8f0",
-                                            color: "#1e293b",
-                                            textDecoration: "none"
-                                        }}
-                                    >
-                                        <div style={{
-                                            width: "48px",
-                                            height: "48px",
-                                            borderRadius: "8px",
-                                            background: "#f1f5f9",
-                                            display: "flex",
-                                            alignItems: "center",
-                                            justifyContent: "center",
-                                            overflow: "hidden"
-                                        }}>
-                                            {(item.thumbnail_url || item.logo_url) ? (
-                                                <img
-                                                    src={`http://localhost:8080/${(item.thumbnail_url || item.logo_url || "").replace(/^\/+/, "")}`}
-                                                    alt=""
-                                                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                                                />
-                                            ) : (
-                                                <span style={{ fontSize: "1.5rem" }}>{searchType === "event" ? "🎓" : "🏢"}</span>
-                                            )}
-                                        </div>
-                                        <div>
-                                            <div style={{ fontWeight: "600" }}>{item.title || item.name}</div>
-                                            <div style={{ fontSize: "0.8rem", color: "#64748b" }}>
-                                                {item.category || "Umum"}
-                                            </div>
-                                        </div>
-                                    </Link>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </div>
-
             {/* FEATURED BANNER SLIDER */}
             {featuredEvents.length > 0 && (
                 <div style={{ marginBottom: "48px" }}>
@@ -300,7 +136,7 @@ export default function Dashboard() {
                                         minWidth: "100%",
                                         height: "280px",
                                         background: evt.thumbnail_url
-                                            ? `linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.7)), url(http://localhost:8080/${(evt.thumbnail_url || "").replace(/^\/+/, "")})`
+                                            ? `linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.7)), url(${getThumbnailUrl(evt.thumbnail_url)})`
                                             : "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
                                         backgroundSize: "cover",
                                         backgroundPosition: "center",
@@ -442,7 +278,7 @@ export default function Dashboard() {
                         gap: "24px"
                     }}>
                         {upcoming.map(evt => (
-                            <EventCard key={evt.id} event={evt} isUpcoming={true} formatDate={formatDate} />
+                            <EventCard key={evt.id} event={evt} isUpcoming={true} formatDate={formatDate} getThumbnailUrl={getThumbnailUrl} />
                         ))}
                     </div>
                 </div>
@@ -485,7 +321,7 @@ export default function Dashboard() {
                         gap: "24px"
                     }}>
                         {events.map(evt => (
-                            <EventCard key={evt.id} event={evt} isUpcoming={false} formatDate={formatDate} />
+                            <EventCard key={evt.id} event={evt} isUpcoming={false} formatDate={formatDate} getThumbnailUrl={getThumbnailUrl} />
                         ))}
                     </div>
                 )}
@@ -495,7 +331,7 @@ export default function Dashboard() {
 }
 
 // Event Card Component
-function EventCard({ event, isUpcoming, formatDate }) {
+function EventCard({ event, isUpcoming, formatDate, getThumbnailUrl }) {
     const evt = event;
 
     return (
@@ -539,7 +375,7 @@ function EventCard({ event, isUpcoming, formatDate }) {
             }}>
                 {evt.thumbnail_url ? (
                     <img
-                        src={(evt.thumbnail_url || "").startsWith("http") ? evt.thumbnail_url : `http://localhost:8080/${(evt.thumbnail_url || "").replace(/^\/+/, "")}`}
+                        src={getThumbnailUrl(evt.thumbnail_url)}
                         alt={evt.title}
                         style={{ width: "100%", height: "100%", objectFit: "cover" }}
                     />

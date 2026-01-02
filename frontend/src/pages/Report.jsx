@@ -39,7 +39,7 @@ export default function Report() {
                 formData.append('photo', form.photo);
             }
 
-            await api.post('/reports', formData, {
+            await api.post('/user/reports', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
 

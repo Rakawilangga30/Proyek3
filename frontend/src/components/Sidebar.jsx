@@ -128,6 +128,7 @@ export default function Sidebar() {
             <MenuItem to="/dashboard/admin/approvals" label="Persetujuan Org" icon="📝" />
             <MenuItem to="/dashboard/admin/affiliates" label="Pengajuan Affiliate" icon="🤝" />
             <MenuItem to="/dashboard/admin/official-org" label="Official Org" icon="🏛️" />
+            <MenuItem to="/dashboard/admin/featured" label="Featured Banner" icon="⭐" />
             <MenuItem to="/dashboard/admin/reports" label="Kelola Laporan" icon="📢" />
           </>
         )}

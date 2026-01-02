@@ -42,10 +42,18 @@ export default function AdminOrgList() {
         }
     };
 
-    const filteredOrgs = organizations.filter(org =>
-        org.name.toLowerCase().includes(search.toLowerCase()) ||
-        org.owner_name.toLowerCase().includes(search.toLowerCase())
-    );
+    const filteredOrgs = organizations.filter(org => {
+        if (!search.trim()) return true;
+        const q = search.toLowerCase();
+        return (
+            org.name?.toLowerCase().includes(q) ||
+            org.owner_name?.toLowerCase().includes(q) ||
+            org.owner_email?.toLowerCase().includes(q) ||
+            org.email?.toLowerCase().includes(q) ||
+            org.phone?.toLowerCase().includes(q) ||
+            org.category?.toLowerCase().includes(q)
+        );
+    });
 
     if (loading) {
         return (
@@ -76,21 +84,52 @@ export default function AdminOrgList() {
             </div>
 
             {/* Search */}
-            <div style={{ marginBottom: "20px" }}>
-                <input
-                    type="text"
-                    placeholder="🔍 Cari organisasi atau owner..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    style={{
-                        width: "100%",
-                        maxWidth: "400px",
-                        padding: "12px 16px",
-                        border: "1px solid #e2e8f0",
-                        borderRadius: "10px",
-                        fontSize: "0.95rem"
-                    }}
-                />
+            <div style={{
+                background: "white",
+                borderRadius: "12px",
+                padding: "16px 20px",
+                marginBottom: "20px",
+                boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
+                border: "1px solid #e2e8f0"
+            }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                    <span style={{ fontSize: "1.2rem" }}>🔍</span>
+                    <input
+                        type="text"
+                        placeholder="Cari organisasi berdasarkan nama, owner, email, atau kategori..."
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        style={{
+                            flex: 1,
+                            padding: "12px 16px",
+                            border: "1px solid #e2e8f0",
+                            borderRadius: "8px",
+                            fontSize: "0.95rem",
+                            outline: "none"
+                        }}
+                    />
+                    {search && (
+                        <button
+                            onClick={() => setSearch("")}
+                            style={{
+                                padding: "8px 16px",
+                                background: "#f1f5f9",
+                                border: "none",
+                                borderRadius: "8px",
+                                cursor: "pointer",
+                                fontSize: "0.85rem",
+                                color: "#64748b"
+                            }}
+                        >
+                            ✕ Clear
+                        </button>
+                    )}
+                </div>
+                {search && (
+                    <div style={{ marginTop: "10px", fontSize: "0.85rem", color: "#64748b" }}>
+                        Menampilkan {filteredOrgs.length} dari {organizations.length} organisasi
+                    </div>
+                )}
             </div>
 
             {/* Table */}
@@ -114,7 +153,7 @@ export default function AdminOrgList() {
                         {filteredOrgs.length === 0 ? (
                             <tr>
                                 <td colSpan={5} style={{ padding: "40px", textAlign: "center", color: "#94a3b8" }}>
-                                    Tidak ada organisasi ditemukan
+                                    {search ? `Tidak ada organisasi yang cocok dengan "${search}"` : "Tidak ada organisasi ditemukan"}
                                 </td>
                             </tr>
                         ) : (

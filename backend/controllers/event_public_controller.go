@@ -1,16 +1,18 @@
 package controllers
 
 import (
-	"fmt"
-	"net/http"
 	"BACKEND/config"
 	"BACKEND/models"
+	"fmt"
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 )
 
 // Struct respon ringkas
 type PublicEventResponse struct {
 	ID               int64   `db:"id" json:"id"`
+	OrganizationID   int64   `db:"organization_id" json:"organization_id"`
 	Title            string  `db:"title" json:"title"`
 	Description      string  `db:"description" json:"description"`
 	Category         string  `db:"category" json:"category"`
@@ -28,7 +30,7 @@ func ListPublicEvents(c *gin.Context) {
 	// Base Query
 	baseQuery := `
 		SELECT 
-			e.id, e.title, e.description, e.category, e.thumbnail_url,
+			e.id, e.organization_id, e.title, e.description, e.category, e.thumbnail_url,
 			o.name AS organization_name,
 			(SELECT COUNT(*) FROM sessions s WHERE s.event_id = e.id) AS session_count,
 			(SELECT COALESCE(MIN(price), 0) FROM sessions s WHERE s.event_id = e.id) AS min_price,
@@ -40,12 +42,16 @@ func ListPublicEvents(c *gin.Context) {
 	// 1. PUBLISHED
 	var publishedEvents []PublicEventResponse
 	config.DB.Select(&publishedEvents, baseQuery+" WHERE e.publish_status = 'PUBLISHED' ORDER BY e.created_at DESC")
-	if publishedEvents == nil { publishedEvents = []PublicEventResponse{} }
+	if publishedEvents == nil {
+		publishedEvents = []PublicEventResponse{}
+	}
 
 	// 2. UPCOMING (SCHEDULED)
 	var upcomingEvents []PublicEventResponse
 	config.DB.Select(&upcomingEvents, baseQuery+" WHERE e.publish_status = 'SCHEDULED' ORDER BY e.publish_at ASC")
-	if upcomingEvents == nil { upcomingEvents = []PublicEventResponse{} }
+	if upcomingEvents == nil {
+		upcomingEvents = []PublicEventResponse{}
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"events":   publishedEvents,

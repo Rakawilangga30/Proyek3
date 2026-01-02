@@ -31,25 +31,50 @@ export default function AdminReports() {
     };
 
     const formatDate = (dateStr) => {
-        return new Date(dateStr).toLocaleDateString('id-ID', {
-            day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
-        });
+        if (!dateStr) return '-';
+        // MySQL datetime is stored as local time, parse it correctly
+        // Format: "2026-01-02T18:30:00Z" or "2026-01-02 18:30:00"
+        let date = new Date(dateStr);
+
+        // If the date string doesn't have timezone info, MySQL returns local time
+        // but JS might interpret it as UTC. Add 7 hours to correct.
+        if (!dateStr.includes('+') && dateStr.includes('T')) {
+            // Datetime with T but no timezone - likely being parsed as UTC
+            date = new Date(date.getTime() + (7 * 60 * 60 * 1000));
+        }
+
+        const options = {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+        };
+        return date.toLocaleDateString('id-ID', options);
     };
 
     const statusColors = {
-        'PENDING': { bg: '#fef3c7', color: '#b45309' },
-        'IN_PROGRESS': { bg: '#dbeafe', color: '#1d4ed8' },
-        'RESOLVED': { bg: '#dcfce7', color: '#166534' },
-        'CLOSED': { bg: '#f3f4f6', color: '#6b7280' }
+        'pending': { bg: '#fef3c7', color: '#b45309' },
+        'in_progress': { bg: '#dbeafe', color: '#1d4ed8' },
+        'resolved': { bg: '#dcfce7', color: '#166534' },
+        'rejected': { bg: '#fee2e2', color: '#dc2626' },
+        'closed': { bg: '#f3f4f6', color: '#6b7280' }
     };
+
+    const defaultColor = { bg: '#f3f4f6', color: '#6b7280' };
+    const getStatusColor = (status) => statusColors[status] || defaultColor;
 
     const categoryLabels = {
         'BUG': '🐛 Bug',
         'CONTENT': '📝 Konten',
         'FRAUD': '⚠️ Fraud',
         'SUGGESTION': '💡 Saran',
-        'OTHER': '📌 Lainnya'
+        'OTHER': '📌 Lainnya',
+        'general': '📌 Umum'
     };
+
+    const statusList = ['pending', 'in_progress', 'resolved', 'rejected'];
 
     const filteredReports = filter === 'ALL'
         ? reports
@@ -68,19 +93,21 @@ export default function AdminReports() {
 
             {/* Stats */}
             <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "16px", marginBottom: "24px" }}>
-                {['PENDING', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'].map(status => (
+                {statusList.map(status => (
                     <div key={status} style={{
-                        background: statusColors[status].bg,
+                        background: getStatusColor(status).bg,
                         padding: "16px",
                         borderRadius: "12px",
                         textAlign: "center",
                         cursor: "pointer",
-                        border: filter === status ? `2px solid ${statusColors[status].color}` : "2px solid transparent"
+                        border: filter === status ? `2px solid ${getStatusColor(status).color}` : "2px solid transparent"
                     }} onClick={() => setFilter(filter === status ? 'ALL' : status)}>
-                        <div style={{ fontSize: "1.5rem", fontWeight: "700", color: statusColors[status].color }}>
+                        <div style={{ fontSize: "1.5rem", fontWeight: "700", color: getStatusColor(status).color }}>
                             {reports.filter(r => r.status === status).length}
                         </div>
-                        <div style={{ fontSize: "0.85rem", color: statusColors[status].color }}>{status}</div>
+                        <div style={{ fontSize: "0.85rem", color: getStatusColor(status).color, textTransform: "capitalize" }}>
+                            {status.replace('_', ' ')}
+                        </div>
                     </div>
                 ))}
             </div>
@@ -104,14 +131,15 @@ export default function AdminReports() {
                             <div>
                                 <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "8px" }}>
                                     <span style={{
-                                        background: statusColors[report.status].bg,
-                                        color: statusColors[report.status].color,
+                                        background: getStatusColor(report.status).bg,
+                                        color: getStatusColor(report.status).color,
                                         padding: "4px 12px",
                                         borderRadius: "20px",
                                         fontSize: "0.8rem",
-                                        fontWeight: "600"
+                                        fontWeight: "600",
+                                        textTransform: "capitalize"
                                     }}>
-                                        {report.status}
+                                        {report.status.replace('_', ' ')}
                                     </span>
                                     <span style={{ background: "#f1f5f9", padding: "4px 12px", borderRadius: "20px", fontSize: "0.8rem" }}>
                                         {categoryLabels[report.category] || report.category}
@@ -119,7 +147,14 @@ export default function AdminReports() {
                                 </div>
                                 <h3 style={{ margin: "0 0 4px 0", color: "#1e293b" }}>{report.subject}</h3>
                                 <p style={{ margin: 0, color: "#64748b", fontSize: "0.85rem" }}>
-                                    {report.user_name || 'Anonim'} • {formatDate(report.created_at)}
+                                    <span style={{ fontWeight: "600", color: "#374151" }}>
+                                        {report.user_name || 'Pengguna Tidak Diketahui'}
+                                    </span>
+                                    {report.user_email && (
+                                        <span style={{ color: "#94a3b8" }}> ({report.user_email})</span>
+                                    )}
+                                    <span style={{ margin: "0 8px", color: "#cbd5e1" }}>•</span>
+                                    {formatDate(report.created_at)}
                                 </p>
                             </div>
                             {report.photo_url && (
@@ -141,17 +176,17 @@ export default function AdminReports() {
                         )}
 
                         <div style={{ display: "flex", gap: "8px" }}>
-                            {report.status === 'PENDING' && (
-                                <button onClick={() => updateStatus(report.id, 'IN_PROGRESS', 'Sedang ditangani')}
+                            {report.status === 'pending' && (
+                                <button onClick={() => updateStatus(report.id, 'in_progress', 'Sedang ditangani')}
                                     style={actionBtn('#3b82f6')}>🔄 Proses</button>
                             )}
-                            {(report.status === 'PENDING' || report.status === 'IN_PROGRESS') && (
-                                <button onClick={() => updateStatus(report.id, 'RESOLVED', 'Masalah sudah diselesaikan')}
+                            {(report.status === 'pending' || report.status === 'in_progress') && (
+                                <button onClick={() => updateStatus(report.id, 'resolved', 'Masalah sudah diselesaikan')}
                                     style={actionBtn('#10b981')}>✅ Selesai</button>
                             )}
-                            {report.status !== 'CLOSED' && (
-                                <button onClick={() => updateStatus(report.id, 'CLOSED', 'Ditutup oleh admin')}
-                                    style={actionBtn('#6b7280')}>❌ Tutup</button>
+                            {report.status !== 'resolved' && report.status !== 'rejected' && (
+                                <button onClick={() => updateStatus(report.id, 'rejected', 'Ditolak oleh admin')}
+                                    style={actionBtn('#6b7280')}>❌ Tolak</button>
                             )}
                         </div>
                     </div>
