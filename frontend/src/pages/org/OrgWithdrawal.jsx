@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { toast } from 'react-hot-toast';
 import api from '../../api';
 
 export default function OrgWithdrawal() {
@@ -60,22 +61,22 @@ export default function OrgWithdrawal() {
         const amount = parseInt(form.amount) || 0;
 
         if (amount < MIN_WITHDRAWAL) {
-            alert(`Minimal penarikan ${formatPrice(MIN_WITHDRAWAL)}`);
+            toast.error(`Minimal penarikan ${formatPrice(MIN_WITHDRAWAL)}`);
             return;
         }
 
         if (amount > (balance?.available_balance || 0)) {
-            alert('Saldo tidak mencukupi');
+            toast.error('Saldo tidak mencukupi');
             return;
         }
 
         if (!form.account_name || !form.account_number) {
-            alert('Lengkapi data rekening/akun');
+            toast.error('Lengkapi data rekening/akun');
             return;
         }
 
         if (form.payment_method === 'BANK' && !form.bank_name) {
-            alert('Masukkan nama bank');
+            toast.error('Masukkan nama bank');
             return;
         }
 
@@ -103,12 +104,13 @@ export default function OrgWithdrawal() {
                 bank_name: form.bank_name
             });
 
-            alert(`✅ ${response.data.message}\n\nReferensi: ${response.data.reference}\nSaldo baru: ${formatPrice(response.data.new_balance)}`);
+            toast.success("Penarikan berhasil diproses!");
+            // alert(`✅ ${response.data.message}\n\nReferensi: ${response.data.reference}\nSaldo baru: ${formatPrice(response.data.new_balance)}`);
 
             setForm({ ...form, amount: '' });
             fetchData();
         } catch (error) {
-            alert('❌ ' + (error.response?.data?.error || 'Gagal memproses penarikan'));
+            toast.error('❌ ' + (error.response?.data?.error || 'Gagal memproses penarikan'));
         } finally {
             setSubmitting(false);
         }

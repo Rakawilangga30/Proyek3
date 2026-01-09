@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
+import { toast } from "react-hot-toast";
 import api, { updateEvent, updateSession, uploadEventThumbnail } from "../../api";
 import QuizBuilder from "../../components/QuizBuilder";
 
@@ -42,6 +43,8 @@ const MaterialItem = ({ item, type, onEdit, onDelete }) => {
     );
 };
 
+import Modal from "../../components/Modal";
+
 // ==========================================
 // 2. MODAL UPDATE MATERI (FIXED HOOK RULES)
 // ==========================================
@@ -66,20 +69,41 @@ const UpdateMaterialModal = ({ isOpen, config, onClose, onSave }) => {
         onClose();
     };
 
-    // 2. Baru Conditional Return
-    if (!isOpen) return null;
-
     return (
-        <div style={modalOverlayStyle}>
-            <div style={{ ...modalContentStyle, width: "600px" }}>
-                <h3 style={{ marginTop: 0, borderBottom: "1px solid #eee", paddingBottom: 10 }}>✏️ Edit Info {config.type === 'video' ? 'Video' : 'Modul'}</h3>
-                <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 15 }}>
-                    <div><label style={{ display: "block", marginBottom: 5, fontWeight: "bold" }}>Judul Materi</label><input type="text" value={title} onChange={(e) => setTitle(e.target.value)} required style={{ width: "100%", padding: 10, border: "1px solid #ccc", borderRadius: 4 }} /></div>
-                    <div><label style={{ display: "block", marginBottom: 5, fontWeight: "bold" }}>Deskripsi / Penjelasan</label><textarea value={description} onChange={(e) => setDescription(e.target.value)} rows="8" style={{ width: "100%", padding: 10, border: "1px solid #ccc", borderRadius: 4, fontFamily: "inherit", lineHeight: "1.5", resize: "vertical" }} /></div>
-                    <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 10 }}><button type="button" onClick={onClose} disabled={loading} style={btnSecondaryStyle}>Batal</button><button type="submit" disabled={loading} style={btnPrimaryStyle}>{loading ? "Menyimpan..." : "Simpan Perubahan"}</button></div>
-                </form>
-            </div>
-        </div>
+        <Modal
+            isOpen={isOpen}
+            onClose={onClose}
+            title={`✏️ Edit Info ${config.type === 'video' ? 'Video' : 'Modul'}`}
+            size="md"
+        >
+            <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 15 }}>
+                <div>
+                    <label className="form-label">Judul Materi</label>
+                    <input
+                        type="text"
+                        className="form-input"
+                        value={title}
+                        onChange={(e) => setTitle(e.target.value)}
+                        required
+                    />
+                </div>
+                <div>
+                    <label className="form-label">Deskripsi / Penjelasan</label>
+                    <textarea
+                        className="form-textarea"
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                        rows="6"
+                    />
+                </div>
+                <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 10 }}>
+                    <button type="button" onClick={onClose} disabled={loading} className="btn btn-secondary">Batal</button>
+                    <button type="submit" disabled={loading} className="btn btn-primary">
+                        {loading ? "Menyimpan..." : "Simpan Perubahan"}
+                    </button>
+                </div>
+            </form>
+        </Modal>
     );
 };
 
@@ -115,7 +139,7 @@ const VisibilityModal = ({ config, onClose, onSave }) => {
 
     const handleSave = async () => {
         setLoading(true);
-        if (status === 'SCHEDULED' && !scheduleDate) { alert("Pilih tanggal!"); setLoading(false); return; }
+        if (status === 'SCHEDULED' && !scheduleDate) { toast.error("Pilih tanggal!"); setLoading(false); return; }
 
         // LOGIKA TIMEZONE: Konversi Lokal ke UTC murni sebelum kirim ke Backend
         let finalDate = null;
@@ -127,27 +151,43 @@ const VisibilityModal = ({ config, onClose, onSave }) => {
         setLoading(false); onClose();
     };
 
-    // 2. Baru Conditional Return
-    if (!config.isOpen) return null;
-
     return (
-        <div style={modalOverlayStyle}>
-            <div style={modalContentStyle}>
-                <h3 style={{ marginTop: 0, borderBottom: "1px solid #eee", paddingBottom: 10 }}>👁️ Atur Status: {config.type}</h3>
-                <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "20px" }}>
-                    <label style={{ ...radioLabelStyle, background: status === 'DRAFT' ? '#f7fafc' : 'white' }}><input type="radio" name="vis" value="DRAFT" checked={status === 'DRAFT'} onChange={() => setStatus('DRAFT')} /> <div><b>🔒 Private (Draft)</b><br /><small style={{ color: "#718096" }}>Hanya Anda yang melihat.</small></div></label>
-                    <label style={{ ...radioLabelStyle, background: status === 'PUBLISHED' ? '#f0fff4' : 'white' }}><input type="radio" name="vis" value="PUBLISHED" checked={status === 'PUBLISHED'} onChange={() => setStatus('PUBLISHED')} /> <div><b>🌍 Public (Tayang)</b><br /><small style={{ color: "#718096" }}>Dapat dilihat user.</small></div></label>
-                    <label style={{ ...radioLabelStyle, background: status === 'SCHEDULED' ? '#fffaf0' : 'white' }}><input type="radio" name="vis" value="SCHEDULED" checked={status === 'SCHEDULED'} onChange={() => setStatus('SCHEDULED')} /> <div><b>📅 Jadwalkan</b><br /><small style={{ color: "#718096" }}>Tayang otomatis nanti.</small></div></label>
-                    {status === 'SCHEDULED' && (
-                        <div style={{ marginLeft: 30 }}>
-                            <input type="datetime-local" value={scheduleDate} onChange={(e) => setScheduleDate(e.target.value)} style={{ width: "100%", padding: 8, border: "1px solid #ccc", borderRadius: 4 }} />
-                            <small style={{ color: "#666" }}>Waktu sesuai perangkat Anda.</small>
-                        </div>
-                    )}
-                </div>
-                <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}><button onClick={onClose} disabled={loading} style={btnSecondaryStyle}>Batal</button><button onClick={handleSave} disabled={loading} style={btnPrimaryStyle}>Simpan Status</button></div>
+        <Modal
+            isOpen={config.isOpen}
+            onClose={onClose}
+            title={`👁️ Atur Status: ${config.type}`}
+            size="sm"
+        >
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "20px" }}>
+                <label style={{ ...radioLabelStyle, background: status === 'DRAFT' ? '#f8fafc' : 'white' }}>
+                    <input type="radio" name="vis" value="DRAFT" checked={status === 'DRAFT'} onChange={() => setStatus('DRAFT')} />
+                    <div><b>🔒 Private (Draft)</b><br /><small className="text-gray">Hanya Anda yang melihat.</small></div>
+                </label>
+                <label style={{ ...radioLabelStyle, background: status === 'PUBLISHED' ? '#f0fdf4' : 'white' }}>
+                    <input type="radio" name="vis" value="PUBLISHED" checked={status === 'PUBLISHED'} onChange={() => setStatus('PUBLISHED')} />
+                    <div><b>🌍 Public (Tayang)</b><br /><small className="text-gray">Dapat dilihat user.</small></div>
+                </label>
+                <label style={{ ...radioLabelStyle, background: status === 'SCHEDULED' ? '#fffbeb' : 'white' }}>
+                    <input type="radio" name="vis" value="SCHEDULED" checked={status === 'SCHEDULED'} onChange={() => setStatus('SCHEDULED')} />
+                    <div><b>📅 Jadwalkan</b><br /><small className="text-gray">Tayang otomatis nanti.</small></div>
+                </label>
+                {status === 'SCHEDULED' && (
+                    <div style={{ marginLeft: 30 }} className="animate-slide-up">
+                        <input
+                            type="datetime-local"
+                            className="form-input"
+                            value={scheduleDate}
+                            onChange={(e) => setScheduleDate(e.target.value)}
+                        />
+                        <small className="text-gray">Waktu sesuai perangkat Anda.</small>
+                    </div>
+                )}
             </div>
-        </div>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+                <button onClick={onClose} disabled={loading} className="btn btn-secondary">Batal</button>
+                <button onClick={handleSave} disabled={loading} className="btn btn-primary">Simpan Status</button>
+            </div>
+        </Modal>
     );
 };
 
@@ -170,7 +210,7 @@ const UploadModal = ({ isOpen, type, onClose, onUpload }) => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!file) return alert("Pilih file!");
+        if (!file) return toast.error("Pilih file wajib diisi!");
         setLoading(true);
         const finalTitle = title.trim() || file.name;
         await onUpload(file, finalTitle, description);
@@ -178,21 +218,51 @@ const UploadModal = ({ isOpen, type, onClose, onUpload }) => {
         onClose();
     };
 
-    // 2. Baru Conditional Return
-    if (!isOpen) return null;
-
     return (
-        <div style={modalOverlayStyle}>
-            <div style={{ ...modalContentStyle, width: "600px" }}>
-                <h3 style={{ marginTop: 0, borderBottom: "1px solid #eee", paddingBottom: 10 }}>Upload {type === 'video' ? 'Video' : 'Modul'}</h3>
-                <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 15 }}>
-                    <input type="file" onChange={(e) => setFile(e.target.files[0])} required style={{ padding: 5, border: "1px solid #ccc" }} />
-                    <input type="text" placeholder="Judul (Opsional)" value={title} onChange={(e) => setTitle(e.target.value)} style={{ padding: 10, border: "1px solid #ccc" }} />
-                    <textarea placeholder="Deskripsi..." value={description} onChange={(e) => setDescription(e.target.value)} rows="5" style={{ padding: 10, border: "1px solid #ccc" }} />
-                    <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}><button type="button" onClick={onClose} style={btnSecondaryStyle}>Batal</button><button type="submit" disabled={loading} style={btnPrimaryStyle}>Upload</button></div>
-                </form>
-            </div>
-        </div>
+        <Modal
+            isOpen={isOpen}
+            onClose={onClose}
+            title={`Upload ${type === 'video' ? 'Video' : 'Modul'}`}
+            size="md"
+        >
+            <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 15 }}>
+                <div>
+                    <label className="form-label">Pilih File</label>
+                    <input
+                        type="file"
+                        className="form-input"
+                        onChange={(e) => setFile(e.target.files[0])}
+                        required
+                    />
+                </div>
+                <div>
+                    <label className="form-label">Judul (Opsional)</label>
+                    <input
+                        type="text"
+                        className="form-input"
+                        placeholder="Jika kosong, akan menggunakan nama file"
+                        value={title}
+                        onChange={(e) => setTitle(e.target.value)}
+                    />
+                </div>
+                <div>
+                    <label className="form-label">Deskripsi</label>
+                    <textarea
+                        className="form-textarea"
+                        placeholder="Deskripsi singkat materi..."
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                        rows="4"
+                    />
+                </div>
+                <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+                    <button type="button" onClick={onClose} className="btn btn-secondary">Batal</button>
+                    <button type="submit" disabled={loading} className="btn btn-primary">
+                        {loading ? "Mengupload..." : "Upload"}
+                    </button>
+                </div>
+            </form>
+        </Modal>
     );
 };
 
@@ -240,29 +310,29 @@ export default function ManageEvent() {
         try {
             const res = await uploadEventThumbnail(event.id, file);
             setEvent(prev => ({ ...prev, thumbnail_url: res.thumbnail_url }));
-            alert("✅ Thumbnail berhasil diubah!");
-        } catch (error) { alert("❌ Gagal upload thumbnail"); }
+            toast.success("Thumbnail berhasil diubah!");
+        } catch (error) { toast.error("Gagal upload thumbnail"); }
     };
 
     const handleDeleteEvent = async () => {
         if (window.confirm("⚠️ PERINGATAN KERAS!\n\nYakin hapus Event ini? SEMUA SESI & MATERI akan hilang permanen!")) {
-            try { await api.delete(`/organization/events/${event.id}`); alert("Event dihapus."); navigate("/dashboard/org"); }
-            catch (error) { alert("Gagal menghapus event"); }
+            try { await api.delete(`/organization/events/${event.id}`); toast.success("Event berhasil dihapus"); navigate("/dashboard/org"); }
+            catch (error) { toast.error("Gagal menghapus event"); }
         }
     };
 
     const handleDeleteSession = async (sessionId) => {
         if (window.confirm("Yakin hapus Sesi ini? Materi di dalamnya ikut terhapus.")) {
-            try { await api.delete(`/organization/sessions/${sessionId}`); alert("Sesi dihapus."); loadData(); setEditSessionId(null); }
-            catch (error) { alert("Gagal menghapus sesi"); }
+            try { await api.delete(`/organization/sessions/${sessionId}`); toast.success("Sesi berhasil dihapus"); loadData(); setEditSessionId(null); }
+            catch (error) { toast.error("Gagal menghapus sesi"); }
         }
     };
 
     const handleDeleteMaterial = async (item, type, sessionId) => {
         const label = type === 'video' ? 'Video' : 'File';
         if (window.confirm(`Yakin hapus ${label}: "${item.title}"?`)) {
-            try { await api.delete(`/organization/sessions/${sessionId}/${type}s/${item.id}`); alert(`${label} dihapus!`); loadData(); }
-            catch (error) { alert(`Gagal menghapus ${label}`); }
+            try { await api.delete(`/organization/sessions/${sessionId}/${type}s/${item.id}`); toast.success(`${label} berhasil dihapus!`); loadData(); }
+            catch (error) { toast.error(`Gagal menghapus ${label}`); }
         }
     };
 
@@ -273,8 +343,8 @@ export default function ManageEvent() {
 
     const handleUpdateSession = async (e) => {
         e.preventDefault();
-        try { await updateSession(editSessionId, editSessionForm); setSessions(prev => prev.map(s => s.id === editSessionId ? { ...s, ...editSessionForm } : s)); setEditSessionId(null); alert("✅ Sesi diupdate!"); }
-        catch (e) { alert("Gagal update sesi"); }
+        try { await updateSession(editSessionId, editSessionForm); setSessions(prev => prev.map(s => s.id === editSessionId ? { ...s, ...editSessionForm } : s)); setEditSessionId(null); toast.success("Sesi berhasil diupdate!"); }
+        catch (e) { toast.error("Gagal update sesi"); }
     };
 
     const openUpdateModal = (item, type, sessionId) => {
@@ -282,18 +352,18 @@ export default function ManageEvent() {
     };
 
     const handleUpdateMaterialSubmit = async (type, sessionId, mediaId, title, description) => {
-        try { await api.put(`/organization/sessions/${sessionId}/${type}s/${mediaId}`, { title, description }); alert("✅ Materi diupdate!"); loadData(); }
-        catch (error) { alert("❌ Gagal update"); }
+        try { await api.put(`/organization/sessions/${sessionId}/${type}s/${mediaId}`, { title, description }); toast.success("Materi berhasil diupdate!"); loadData(); }
+        catch (error) { toast.error("Gagal mengupdate materi"); }
     };
 
     const handleUpdateEvent = async (e) => {
         e.preventDefault();
-        try { await updateEvent(event.id, editEventForm); setEvent({ ...event, ...editEventForm }); setIsEditingEvent(false); alert("Updated!"); } catch (e) { alert("Error updating event"); }
+        try { await updateEvent(event.id, editEventForm); setEvent({ ...event, ...editEventForm }); setIsEditingEvent(false); toast.success("Event berhasil diupdate!"); } catch (e) { toast.error("Gagal update event"); }
     };
 
     const handleCreateSession = async (e) => {
         e.preventDefault();
-        try { await api.post(`/organization/events/${eventID}/sessions`, newSession); setNewSession({ title: "", description: "", price: 0 }); loadData(); alert("Created!"); } catch (e) { alert("Error"); }
+        try { await api.post(`/organization/events/${eventID}/sessions`, newSession); setNewSession({ title: "", description: "", price: 0 }); loadData(); toast.success("Sesi berhasil dibuat!"); } catch (e) { toast.error("Gagal membuat sesi"); }
     };
 
     const openVisModal = (type, item) => {
@@ -311,8 +381,8 @@ export default function ManageEvent() {
             } else {
                 setSessions(prev => prev.map(s => s.id === visModal.id ? { ...s, publish_status: res.data.status, publish_at: res.data.publish_at } : s));
             }
-            alert(`Status berhasil diubah: ${status}`);
-        } catch (e) { alert("Error update status"); }
+            toast.success(`Status berhasil diubah: ${status}`);
+        } catch (e) { toast.error("Gagal update status"); }
     };
 
     const openUploadModal = (type, sessionID) => { setUploadModal({ isOpen: true, type, sessionId: sessionID }); };
@@ -321,7 +391,7 @@ export default function ManageEvent() {
         const formData = new FormData();
         formData.append(uploadModal.type === 'video' ? 'video' : 'file', file);
         formData.append("title", title); formData.append("description", desc);
-        try { await api.post(`/organization/sessions/${uploadModal.sessionId}/${uploadModal.type}s`, formData); loadData(); alert("Uploaded!"); } catch (e) { alert("Error"); }
+        try { await api.post(`/organization/sessions/${uploadModal.sessionId}/${uploadModal.type}s`, formData); loadData(); toast.success("Berhasil diupload!"); } catch (e) { toast.error("Gagal upload"); }
     };
 
     if (loading) return <div style={{ padding: 50, textAlign: "center" }}>⏳ Memuat...</div>;
@@ -451,8 +521,6 @@ export default function ManageEvent() {
 }
 
 // STYLES
-const modalOverlayStyle = { position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.5)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 9999 };
-const modalContentStyle = { background: "white", padding: "25px", borderRadius: "8px", width: "450px", maxWidth: "90%", boxShadow: "0 4px 15px rgba(0,0,0,0.3)" };
 const radioLabelStyle = { display: "flex", gap: "10px", padding: "10px", border: "1px solid #ddd", borderRadius: "5px", cursor: "pointer" };
 const btnPrimaryStyle = { background: "#3182ce", color: "white", padding: "8px 15px", border: "none", borderRadius: "4px", cursor: "pointer", fontWeight: "bold" };
 const btnSecondaryStyle = { padding: "8px 15px", border: "none", background: "#cbd5e0", borderRadius: "4px", cursor: "pointer" };

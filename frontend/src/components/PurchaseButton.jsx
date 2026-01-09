@@ -1,20 +1,12 @@
 import { useState } from 'react';
 import api from '../api';
+import toast from 'react-hot-toast';
+import { Loader2, CreditCard } from 'lucide-react';
 
 /**
  * PurchaseButton Component
  * 
  * A reusable button for purchasing sessions via Midtrans Snap
- * 
- * @param {Object} props
- * @param {number} props.sessionId - The session ID to purchase
- * @param {string} props.sessionName - Display name of the session
- * @param {number} props.price - Price in Rupiah
- * @param {function} props.onSuccess - Callback when payment succeeds
- * @param {function} props.onPending - Callback when payment is pending
- * @param {function} props.onError - Callback when payment fails
- * @param {boolean} props.disabled - Whether button is disabled
- * @param {string} props.className - Additional CSS classes
  */
 export default function PurchaseButton({
   sessionId,
@@ -42,7 +34,7 @@ export default function PurchaseButton({
     // Check if user is logged in
     const token = localStorage.getItem('token');
     if (!token) {
-      alert('Silakan login terlebih dahulu untuk membeli');
+      toast.error('Silakan login terlebih dahulu untuk membeli');
       window.location.href = '/login';
       return;
     }
@@ -67,7 +59,7 @@ export default function PurchaseButton({
         onSuccess: async function (result) {
           console.log('Payment success:', result);
 
-          // Simulate success for sandbox (auto-update status)
+          // Simulate success for sandbox
           try {
             await api.post('/sandbox/simulate-payment', { order_id: order_id });
           } catch (e) {
@@ -78,7 +70,7 @@ export default function PurchaseButton({
           if (onSuccess) {
             onSuccess(result, order_id);
           } else {
-            alert('Pembayaran berhasil! Terima kasih atas pembelian Anda.');
+            toast.success('Pembayaran berhasil!');
             window.location.reload();
           }
         },
@@ -88,7 +80,7 @@ export default function PurchaseButton({
           if (onPending) {
             onPending(result, order_id);
           } else {
-            alert('Pembayaran menunggu verifikasi. Silakan selesaikan pembayaran Anda.');
+            toast('Pembayaran menunggu verifikasi.', { icon: '⏳' });
           }
         },
         onError: function (result) {
@@ -97,7 +89,7 @@ export default function PurchaseButton({
           if (onError) {
             onError(result, order_id);
           } else {
-            alert('Pembayaran gagal. Silakan coba lagi.');
+            toast.error('Pembayaran gagal. Silakan coba lagi.');
           }
         },
         onClose: async function () {
@@ -105,16 +97,10 @@ export default function PurchaseButton({
           setLoading(false);
 
           // For sandbox: try to simulate success when popup is closed
-          // This handles cases where user paid via QRIS but didn't click "Selesai"
           try {
-            await api.post('/sandbox/simulate-payment', { order_id: order_id });
-            console.log('Sandbox: Auto-simulated payment success');
-            // Refresh to check if payment went through
-            if (window.confirm('Apakah Anda sudah menyelesaikan pembayaran? Klik OK untuk refresh.')) {
-              window.location.reload();
-            }
+            // Optional: check status or simulate
           } catch (e) {
-            console.log('Sandbox simulate on close:', e.response?.data || e.message);
+            console.log(e);
           }
         }
       });
@@ -125,14 +111,20 @@ export default function PurchaseButton({
 
       const errorData = error.response?.data;
 
+      // Detailed logging for debugging "Failed to create purchase record"
+      console.log("Full Error Data:", JSON.stringify(errorData, null, 2));
+
       // Check if profile is incomplete
       if (errorData?.profile_incomplete) {
         const missingFields = errorData.missing_fields?.join(', ') || '';
-        const message = `${errorData.error}\n\nField yang belum lengkap: ${missingFields}\n\nAnda akan diarahkan ke halaman profil untuk melengkapi data.`;
+        const message = `${errorData.error}\n\nField: ${missingFields}`;
 
-        if (window.confirm(message)) {
+        toast.error(message, { duration: 5000 });
+
+        // redirect after delay
+        setTimeout(() => {
           window.location.href = '/dashboard/profile';
-        }
+        }, 2000);
         return;
       }
 
@@ -141,125 +133,37 @@ export default function PurchaseButton({
       if (onError) {
         onError({ message: errorMessage });
       } else {
-        alert(errorMessage);
+        toast.error(errorMessage);
       }
     }
   };
 
   return (
     <button
-      className={`purchase-button ${className} ${loading ? 'loading' : ''}`}
+      className={`btn ${className} ${loading ? 'opacity-80 cursor-wait' : ''}`}
       onClick={handlePurchase}
       disabled={loading || disabled}
+      style={{
+        background: "linear-gradient(135deg, #f59e0b, #d97706)",
+        color: "white",
+        border: "none",
+        fontWeight: 600,
+        boxShadow: "0 4px 6px -1px rgba(245, 158, 11, 0.3)"
+      }}
     >
       {loading ? (
-        <span className="loading-content">
-          <span className="spinner"></span>
+        <span className="flex items-center gap-2">
+          <Loader2 className="animate-spin" size={18} />
           Memproses...
         </span>
       ) : (
-        <span className="button-content">
-          <span className="price-tag">{formatPrice(price)}</span>
-          <span className="buy-text">Beli Sekarang</span>
+        <span className="flex flex-col items-center leading-tight">
+          <span className="text-lg font-bold">{formatPrice(price)}</span>
+          <span className="text-xs font-medium opacity-90 flex items-center gap-1">
+            <CreditCard size={12} /> Beli Sekarang
+          </span>
         </span>
       )}
-
-      <style>{`
-        .purchase-button {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          padding: 1rem 2rem;
-          background: linear-gradient(135deg, #f0c040, #e6a700);
-          color: #1a1a2e;
-          border: none;
-          border-radius: 12px;
-          font-size: 1rem;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.3s ease;
-          min-width: 180px;
-        }
-
-        .purchase-button:hover:not(:disabled) {
-          transform: translateY(-2px);
-          box-shadow: 0 8px 25px rgba(240, 192, 64, 0.4);
-        }
-
-        .purchase-button:disabled {
-          opacity: 0.7;
-          cursor: not-allowed;
-        }
-
-        .purchase-button.loading {
-          background: linear-gradient(135deg, #888, #666);
-        }
-
-        .button-content {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 0.25rem;
-        }
-
-        .price-tag {
-          font-size: 1.2rem;
-          font-weight: 700;
-        }
-
-        .buy-text {
-          font-size: 0.85rem;
-          opacity: 0.9;
-        }
-
-        .loading-content {
-          display: flex;
-          align-items: center;
-          gap: 0.5rem;
-        }
-
-        .spinner {
-          width: 18px;
-          height: 18px;
-          border: 2px solid rgba(26, 26, 46, 0.3);
-          border-top-color: #1a1a2e;
-          border-radius: 50%;
-          animation: spin 0.8s linear infinite;
-        }
-
-        @keyframes spin {
-          to { transform: rotate(360deg); }
-        }
-
-        /* Free variant */
-        .purchase-button.free {
-          background: linear-gradient(135deg, #4ade80, #22c55e);
-        }
-
-        /* Compact variant */
-        .purchase-button.compact {
-          padding: 0.5rem 1rem;
-          min-width: auto;
-        }
-
-        .purchase-button.compact .button-content {
-          flex-direction: row;
-          gap: 0.5rem;
-        }
-
-        .purchase-button.compact .price-tag {
-          font-size: 1rem;
-        }
-
-        .purchase-button.compact .buy-text {
-          display: none;
-        }
-
-        /* Full width variant */
-        .purchase-button.full-width {
-          width: 100%;
-        }
-      `}</style>
     </button>
   );
 }

@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
+import { toast } from "react-hot-toast";
 import api from '../api';
 
 export default function QuizBuilder({ sessionId, onClose, onSave, apiBase = '/organization' }) {
@@ -15,7 +16,7 @@ export default function QuizBuilder({ sessionId, onClose, onSave, apiBase = '/or
 
     const fetchQuiz = async () => {
         try {
-            const res = await api.get(`${apiBase}/sessions/${sessionId}/quiz`);
+            const res = await api.get(`${apiBase} /sessions/${sessionId}/quiz`);
             if (res.data.quiz) {
                 setQuiz(res.data.quiz);
                 setTitle(res.data.quiz.title || '');
@@ -62,15 +63,14 @@ export default function QuizBuilder({ sessionId, onClose, onSave, apiBase = '/or
             return;
         }
         if (questions.length === 0) {
-            alert('Tambahkan minimal 1 pertanyaan');
+            toast.error('Tambahkan minimal 1 pertanyaan');
             return;
         }
-        for (let i = 0; i < questions.length; i++) {
-            const q = questions[i];
-            if (!q.question_text.trim() || !q.option_a.trim() || !q.option_b.trim()) {
-                alert(`Pertanyaan ${i + 1}: Teks pertanyaan dan opsi A, B wajib diisi`);
-                return;
-            }
+        // Validate questions based on the original logic (question_text, option_a, option_b are required)
+        // and ensure a correct option is selected (though 'A' is default, it's good to check if it's still valid)
+        if (questions.some(q => !q.question_text.trim() || !q.option_a.trim() || !q.option_b.trim() || !q.correct_option)) {
+            toast.error("Mohon lengkapi semua pertanyaan dan jawaban, serta pilih kunci jawaban.");
+            return;
         }
 
         setSaving(true);
@@ -80,11 +80,12 @@ export default function QuizBuilder({ sessionId, onClose, onSave, apiBase = '/or
                 is_enabled: isEnabled,
                 questions
             });
-            alert('✅ Kuis berhasil disimpan!');
+            toast.success('✅ Kuis berhasil disimpan!');
             if (onSave) onSave();
             if (onClose) onClose();
-        } catch (err) {
-            alert('Gagal: ' + (err.response?.data?.error || err.message));
+        } catch (error) {
+            console.error("Gagal simpan kuis:", error);
+            toast.error("Gagal simpan kuis: " + (error.response?.data?.error || error.message));
         } finally {
             setSaving(false);
         }

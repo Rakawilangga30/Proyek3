@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { Crown, Radio, Calendar, Inbox, Image as ImageIcon, Clock, ChevronLeft, ChevronRight, PlayCircle } from "lucide-react";
 import api from "../api";
+import "./Dashboard.css"; // Import the CSS file
 
 export default function Dashboard() {
     const [events, setEvents] = useState([]);
@@ -96,24 +98,14 @@ export default function Dashboard() {
     }
 
     return (
-        <div style={{
-            padding: "24px",
-            maxWidth: "1200px",
-            margin: "0 auto",
-            minHeight: "100vh"
-        }}>
+        <div className="dashboard-container">
 
             {/* FEATURED BANNER SLIDER */}
             {featuredEvents.length > 0 && (
                 <div style={{ marginBottom: "48px" }}>
-                    <div style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "12px",
-                        marginBottom: "16px"
-                    }}>
-                        <span style={{ fontSize: "1.5rem" }}>⭐</span>
-                        <h2 style={{ margin: 0, color: "#1e293b", fontSize: "1.25rem" }}>Featured Events</h2>
+                    <div className="section-title">
+                        <Radio size={28} color="#eb0707ff" fill="#f7f2f2ff" />
+                        <h2>Featured Events</h2>
                     </div>
 
                     <div style={{
@@ -217,7 +209,7 @@ export default function Dashboard() {
                                         alignItems: "center",
                                         justifyContent: "center"
                                     }}
-                                >←</button>
+                                ><ChevronLeft size={24} color="#1e293b" /></button>
                                 <button
                                     onClick={() => setCurrentSlide((prev) => (prev + 1) % featuredEvents.length)}
                                     style={{
@@ -231,12 +223,11 @@ export default function Dashboard() {
                                         background: "rgba(255,255,255,0.9)",
                                         border: "none",
                                         cursor: "pointer",
-                                        fontSize: "1.2rem",
                                         display: "flex",
                                         alignItems: "center",
                                         justifyContent: "center"
                                     }}
-                                >→</button>
+                                ><ChevronRight size={24} color="#1e293b" /></button>
                             </>
                         )}
                     </div>
@@ -246,37 +237,28 @@ export default function Dashboard() {
             {/* SEKSI 1: UPCOMING EVENTS */}
             {upcoming.length > 0 && (
                 <div style={{ marginBottom: "48px" }}>
-                    <div style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "12px",
-                        marginBottom: "24px"
-                    }}>
+                    <div className="section-title">
                         <div style={{
                             width: "4px",
                             height: "32px",
                             background: "linear-gradient(180deg, #f59e0b, #d97706)",
                             borderRadius: "2px"
                         }}></div>
-                        <h2 style={{ margin: 0, color: "#1e293b", fontSize: "1.5rem" }}>
-                            📅 Coming Soon
-                        </h2>
+                        <Calendar size={24} color="#d97706" />
+                        <h2>Coming Soon</h2>
                         <span style={{
                             fontSize: "0.8rem",
                             color: "#64748b",
                             background: "#f1f5f9",
                             padding: "4px 12px",
-                            borderRadius: "20px"
+                            borderRadius: "20px",
+                            fontWeight: 500
                         }}>
                             Segera Hadir
                         </span>
                     </div>
 
-                    <div style={{
-                        display: "grid",
-                        gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
-                        gap: "24px"
-                    }}>
+                    <div className="event-grid">
                         {upcoming.map(evt => (
                             <EventCard key={evt.id} event={evt} isUpcoming={true} formatDate={formatDate} getThumbnailUrl={getThumbnailUrl} />
                         ))}
@@ -286,40 +268,26 @@ export default function Dashboard() {
 
             {/* SEKSI 2: AVAILABLE NOW */}
             <div>
-                <div style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "12px",
-                    marginBottom: "24px"
-                }}>
+                <div className="section-title">
                     <div style={{
                         width: "4px",
                         height: "32px",
                         background: "linear-gradient(180deg, #22c55e, #16a34a)",
                         borderRadius: "2px"
                     }}></div>
-                    <h2 style={{ margin: 0, color: "#1e293b", fontSize: "1.5rem" }}>
-                        🔥 Available Now
-                    </h2>
+                    <Crown size={24} color="#e5ff00ff" fill="#f0c504ff" />
+                    <h2>Available Now</h2>
                 </div>
 
                 {events.length === 0 ? (
-                    <div style={{
-                        textAlign: "center",
-                        padding: "60px 20px",
-                        background: "#f8fafc",
-                        borderRadius: "12px",
-                        color: "#64748b"
-                    }}>
-                        <div style={{ fontSize: "3rem", marginBottom: "16px" }}>📭</div>
+                    <div className="empty-state">
+                        <div style={{ marginBottom: "16px", display: "flex", justifyContent: "center" }}>
+                            <Inbox size={64} color="#cbd5e1" />
+                        </div>
                         <p style={{ margin: 0 }}>Belum ada event yang aktif saat ini.</p>
                     </div>
                 ) : (
-                    <div style={{
-                        display: "grid",
-                        gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
-                        gap: "24px"
-                    }}>
+                    <div className="event-grid">
                         {events.map(evt => (
                             <EventCard key={evt.id} event={evt} isUpcoming={false} formatDate={formatDate} getThumbnailUrl={getThumbnailUrl} />
                         ))}
@@ -335,15 +303,7 @@ function EventCard({ event, isUpcoming, formatDate, getThumbnailUrl }) {
     const evt = event;
 
     return (
-        <div style={{
-            background: "white",
-            borderRadius: "12px",
-            overflow: "hidden",
-            boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
-            transition: "all 0.3s ease",
-            position: "relative",
-            border: isUpcoming ? "2px solid #fef3c7" : "1px solid #e2e8f0"
-        }}>
+        <div className={`event-card ${isUpcoming ? 'upcoming' : ''}`}>
             {/* Badge Upcoming */}
             {isUpcoming && (
                 <div style={{
@@ -359,33 +319,27 @@ function EventCard({ event, isUpcoming, formatDate, getThumbnailUrl }) {
                     boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
                     zIndex: 1
                 }}>
-                    🔜 Upcoming
+
+                    <Clock size={14} color="white" /> Upcoming
                 </div>
             )}
 
             {/* Thumbnail */}
-            <div style={{
-                height: "180px",
-                background: "linear-gradient(135deg, #e2e8f0, #cbd5e1)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "#64748b",
-                overflow: "hidden"
-            }}>
+            <div className="event-card-thumb">
                 {evt.thumbnail_url ? (
                     <img
                         src={getThumbnailUrl(evt.thumbnail_url)}
                         alt={evt.title}
-                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
                     />
                 ) : (
-                    <span style={{ fontSize: "3rem" }}>🖼️</span>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}>
+                        <ImageIcon size={64} color="#94a3b8" />
+                    </div>
                 )}
             </div>
 
             {/* Content */}
-            <div style={{ padding: "20px" }}>
+            <div style={{ padding: "20px", flex: 1, display: "flex", flexDirection: "column" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", marginBottom: "12px" }}>
                     <h3 style={{
                         margin: 0,
@@ -416,7 +370,8 @@ function EventCard({ event, isUpcoming, formatDate, getThumbnailUrl }) {
                     color: "#64748b",
                     fontSize: "0.9rem",
                     margin: "0 0 16px 0",
-                    lineHeight: "1.5"
+                    lineHeight: "1.5",
+                    flex: 1
                 }}>
                     {evt.description?.substring(0, 100)}...
                 </p>
@@ -430,12 +385,13 @@ function EventCard({ event, isUpcoming, formatDate, getThumbnailUrl }) {
                         border: "1px dashed #fbbf24",
                         fontSize: "0.85rem",
                         color: "#b45309",
+
                         marginBottom: "16px",
                         display: "flex",
                         alignItems: "center",
                         gap: "8px"
                     }}>
-                        ⏰ Tayang: {formatDate(evt.publish_at)}
+                        <Clock size={16} color="#b45309" /> Tayang: {formatDate(evt.publish_at)}
                     </div>
                 )}
 
@@ -453,7 +409,8 @@ function EventCard({ event, isUpcoming, formatDate, getThumbnailUrl }) {
                     textDecoration: "none",
                     fontWeight: "600",
                     fontSize: "0.9rem",
-                    transition: "all 0.2s ease"
+                    transition: "all 0.2s ease",
+                    marginTop: "auto"
                 }}>
                     {isUpcoming ? "Lihat Detail" : "Mulai Belajar"}
                 </Link>

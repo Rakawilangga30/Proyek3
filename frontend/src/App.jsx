@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { Toaster } from 'react-hot-toast';
 
 // COMPONENTS
 import Navbar from "./components/Navbar";
@@ -9,6 +10,7 @@ import LandingPage from "./pages/Dashboard";
 import EventDetail from "./pages/EventDetail";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import ForgotPassword from "./pages/ForgotPassword";
 import AboutUs from "./pages/AboutUs";
 import Report from "./pages/Report";
 import OrganizationPublic from "./pages/OrganizationPublic";
@@ -54,6 +56,7 @@ import AdminFeaturedEvents from "./pages/admin/AdminFeaturedEvents";
 function App() {
   return (
     <Router>
+      <Toaster position="top-center" reverseOrder={false} />
       <Routes>
         {/* === PUBLIC ROUTES === */}
         <Route path="/" element={<><Navbar /><LandingPage /></>} />
@@ -63,6 +66,7 @@ function App() {
         <Route path="/organization/:id" element={<><Navbar /><OrganizationPublic /></>} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
 
         {/* === DASHBOARD (Protected) === */}
         <Route path="/dashboard" element={<DashboardLayout />}>

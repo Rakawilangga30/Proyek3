@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { toast } from "react-hot-toast";
 import api, { uploadEventThumbnail } from "../../api";
 
 export default function MyOrganization() {
@@ -68,14 +69,13 @@ export default function MyOrganization() {
             });
             // Update logo_url in profile
             if (res.data.logo_url) {
-                setOrgProfile(prev => ({ ...prev, logo_url: res.data.logo_url }));
                 setEditProfile(prev => ({ ...prev, logo_url: res.data.logo_url }));
             }
-            alert("Logo berhasil diupload!");
+            toast.success("Logo berhasil diupload!");
             setLogoFile(null);
         } catch (error) {
             console.error("Gagal upload logo:", error);
-            alert("Gagal upload logo: " + (error.response?.data?.error || "Error"));
+            toast.error("Gagal upload logo: " + (error.response?.data?.error || "Error"));
         } finally {
             setUploadingLogo(false);
         }
@@ -88,10 +88,10 @@ export default function MyOrganization() {
             await api.put("/organization/profile", editProfile);
             await fetchOrgProfile();
             setShowEditProfile(false);
-            alert("Profil organisasi berhasil diupdate!");
+            toast.success("Profil organisasi berhasil diupdate!");
         } catch (error) {
             console.error(error);
-            alert("Gagal update profil: " + (error.response?.data?.error || "Error"));
+            toast.error("Gagal update profil: " + (error.response?.data?.error || "Error"));
         } finally {
             setSavingProfile(false);
         }
@@ -119,18 +119,18 @@ export default function MyOrganization() {
                     await uploadEventThumbnail(createdId, thumbnailFile);
                 } catch (err) {
                     console.error("Gagal upload thumbnail:", err);
-                    alert("Event berhasil dibuat, tetapi gagal upload thumbnail. Anda bisa menguploadnya nanti di Manage.");
+                    toast.error("Event dibuat, tapi gagal upload thumbnail.");
                 }
             }
 
-            alert("Event berhasil dibuat!");
+            toast.success("Event berhasil dibuat!");
             setShowCreate(false);
             setNewEvent({ title: "", description: "", category: "Teknologi" });
             setThumbnailFile(null);
             fetchMyEvents();
         } catch (error) {
             console.error(error);
-            alert("Gagal buat event: " + (error.response?.data?.error || "Error"));
+            toast.error("Gagal buat event: " + (error.response?.data?.error || "Error"));
         }
     };
 

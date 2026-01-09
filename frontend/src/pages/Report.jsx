@@ -1,5 +1,5 @@
-import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { toast } from 'react-hot-toast';
 import api from '../api';
 
 export default function Report() {
@@ -24,7 +24,7 @@ export default function Report() {
         e.preventDefault();
 
         if (!form.subject || !form.description) {
-            alert('Mohon lengkapi semua field');
+            toast.error('Mohon lengkapi semua field');
             return;
         }
 
@@ -43,10 +43,10 @@ export default function Report() {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
 
-            alert('✅ Laporan berhasil dikirim! Tim kami akan segera menindaklanjuti.');
+            toast.success('Laporan berhasil dikirim! Tim kami akan segera menindaklanjuti.');
             navigate('/');
         } catch (error) {
-            alert('❌ ' + (error.response?.data?.error || 'Gagal mengirim laporan'));
+            toast.error('❌ ' + (error.response?.data?.error || 'Gagal mengirim laporan'));
         } finally {
             setLoading(false);
         }

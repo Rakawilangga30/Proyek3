@@ -1,6 +1,7 @@
 import { useState } from "react";
 import api, { uploadEventThumbnail } from "../../api";
 import { useNavigate } from "react-router-dom";
+import { toast } from "react-hot-toast";
 
 export default function CreateEvent() {
     const navigate = useNavigate();
@@ -28,17 +29,17 @@ export default function CreateEvent() {
                     await uploadEventThumbnail(newEventId, thumbnailFile);
                 } catch (err) {
                     console.error("Gagal upload thumbnail:", err);
-                    alert("Event berhasil dibuat, tetapi gagal upload thumbnail. Anda bisa menguploadnya nanti di menu Manage.");
+                    toast.error("Event dibuat, tapi gagal upload thumbnail.");
                 }
             } else if (thumbnailFile && !newEventId) {
-                alert("Warning: Backend tidak mengembalikan event_id, thumbnail tidak bisa diupload.");
+                toast.error("Warning: Backend tidak mengembalikan event_id");
             }
 
-            alert("✅ Event Berhasil Dibuat!");
+            toast.success("Event Berhasil Dibuat!");
             navigate(`/dashboard/org/event/${newEventId}/manage`);
         } catch (error) {
             console.error(error);
-            alert("Gagal: " + (error.response?.data?.error || "Terjadi kesalahan sistem"));
+            toast.error("Gagal: " + (error.response?.data?.error || "Terjadi kesalahan sistem"));
         } finally {
             setSubmitting(false);
         }

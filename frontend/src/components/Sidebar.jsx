@@ -1,4 +1,10 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import {
+  Home, User, BookOpen, Award, CreditCard, Bell,
+  Rocket, BarChart2, PlusCircle, Package, DollarSign,
+  LayoutDashboard, Building, FileText, CheckSquare,
+  Users, Star, Megaphone, LogOut
+} from "lucide-react";
 
 export default function Sidebar() {
   const location = useLocation();
@@ -15,35 +21,71 @@ export default function Sidebar() {
 
   const isActive = (path) => location.pathname === path;
 
-  const MenuItem = ({ to, label, icon }) => (
-    <Link to={to} style={{ textDecoration: "none" }}>
-      <div style={{
-        padding: "12px 16px",
-        margin: "4px 12px",
-        borderRadius: "8px",
-        backgroundColor: isActive(to) ? "#3b82f6" : "transparent",
-        color: isActive(to) ? "white" : "#64748b",
-        display: "flex",
-        alignItems: "center",
-        gap: "12px",
-        transition: "all 0.2s ease",
-        fontWeight: isActive(to) ? "600" : "500",
-        fontSize: "0.9rem"
-      }}>
-        <span style={{ fontSize: "1.1rem" }}>{icon}</span>
-        <span>{label}</span>
-      </div>
-    </Link>
-  );
+  const MenuItem = ({ to, label, icon: Icon }) => {
+    const active = isActive(to);
+    return (
+      <Link to={to} style={{ textDecoration: "none", display: "block" }}>
+        <div style={{
+          padding: "12px 16px",
+          margin: "4px 16px",
+          borderRadius: "12px",
+          background: active
+            ? "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)"
+            : "transparent",
+          color: active ? "white" : "#94a3b8",
+          display: "flex",
+          alignItems: "center",
+          gap: "12px",
+          transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+          fontWeight: active ? "600" : "500",
+          fontSize: "0.95rem",
+          boxShadow: active ? "0 4px 12px rgba(37, 99, 235, 0.3)" : "none",
+          position: "relative",
+          overflow: "hidden"
+        }}
+          onMouseEnter={(e) => {
+            if (!active) {
+              e.currentTarget.style.background = "rgba(255,255,255,0.05)";
+              e.currentTarget.style.color = "#f8fafc";
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!active) {
+              e.currentTarget.style.background = "transparent";
+              e.currentTarget.style.color = "#94a3b8";
+            }
+          }}
+        >
+          <Icon size={20} strokeWidth={active ? 2.5 : 2} />
+          <span>{label}</span>
+          {active && (
+            <div style={{
+              position: "absolute",
+              right: "0",
+              top: "50%",
+              transform: "translateY(-50%)",
+              width: "4px",
+              height: "20px",
+              background: "white",
+              borderTopLeftRadius: "4px",
+              borderBottomLeftRadius: "4px",
+              opacity: 0.5
+            }} />
+          )}
+        </div>
+      </Link>
+    );
+  };
 
   const SectionTitle = ({ children }) => (
     <p style={{
-      padding: "16px 16px 8px",
-      fontSize: "0.7rem",
-      fontWeight: "600",
-      color: "#94a3b8",
+      padding: "24px 24px 12px",
+      fontSize: "0.75rem",
+      fontWeight: "700",
+      color: "#475569",
       textTransform: "uppercase",
-      letterSpacing: "1px"
+      letterSpacing: "1.2px",
+      margin: 0
     }}>
       {children}
     </p>
@@ -51,64 +93,108 @@ export default function Sidebar() {
 
   return (
     <div style={{
-      width: "260px",
+      width: "280px",
       height: "100vh",
-      backgroundColor: "#ffffff",
-      borderRight: "1px solid #e2e8f0",
+      background: "#0f172a", // Slate 900
+      borderRight: "1px solid #1e293b",
       position: "fixed",
       left: 0,
       top: 0,
       overflowY: "auto",
       display: "flex",
-      flexDirection: "column"
+      flexDirection: "column",
+      boxShadow: "4px 0 24px rgba(0,0,0,0.2)",
+      zIndex: 50
     }}>
       {/* Header */}
       <div style={{
-        padding: "20px 16px",
-        borderBottom: "1px solid #e2e8f0",
-        background: "linear-gradient(135deg, #1e40af, #3b82f6)"
+        padding: "32px 24px",
+        background: "linear-gradient(to bottom, #0f172a, #1e293b)",
+        marginBottom: "10px"
       }}>
-        <h2 style={{
-          margin: 0,
-          fontSize: "1.25rem",
-          color: "white",
-          fontWeight: "700"
+        <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "8px" }}>
+          <div style={{
+            width: "40px",
+            height: "40px",
+            background: "linear-gradient(135deg, #3b82f6, #6366f1)",
+            borderRadius: "10px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "white",
+            boxShadow: "0 0 15px rgba(59, 130, 246, 0.5)"
+          }}>
+            <Rocket size={22} fill="white" />
+          </div>
+          <h2 style={{
+            margin: 0,
+            fontSize: "1.5rem",
+            color: "white",
+            fontWeight: "800",
+            letterSpacing: "-0.5px",
+            background: "linear-gradient(to right, white, #94a3b8)",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent"
+          }}>
+            Webinar
+          </h2>
+        </div>
+        <div style={{
+          background: "rgba(255,255,255,0.05)",
+          padding: "12px",
+          borderRadius: "12px",
+          marginTop: "16px",
+          border: "1px solid rgba(255,255,255,0.1)"
         }}>
-          🚀 Proyek3
-        </h2>
-        <p style={{
-          fontSize: "0.85rem",
-          color: "rgba(255,255,255,0.8)",
-          margin: "4px 0 0 0"
-        }}>
-          Halo, {user.name?.split(" ")[0] || "User"}
-        </p>
+          <p style={{
+            fontSize: "0.9rem",
+            color: "#e2e8f0",
+            margin: "0 0 4px 0",
+            fontWeight: "600"
+          }}>
+            {user.name || "User"}
+          </p>
+          <p style={{
+            fontSize: "0.75rem",
+            color: "#94a3b8",
+            margin: 0
+          }}>
+            {roles.join(" • ") || "Member"}
+          </p>
+        </div>
       </div>
 
       {/* Menu Items */}
-      <div style={{ flex: 1, padding: "8px 0" }}>
+      <div className="custom-scrollbar" style={{ flex: 1, paddingBottom: "20px" }}>
         <SectionTitle>Menu Utama</SectionTitle>
 
-        <MenuItem to="/dashboard" label="Dashboard" icon="🏠" />
-        <MenuItem to="/dashboard/profile" label="Profil Saya" icon="👤" />
-        <MenuItem to="/dashboard/my-courses" label="Kursus Saya" icon="📚" />
-        <MenuItem to="/dashboard/certificates" label="Sertifikat" icon="🎓" />
-        <MenuItem to="/dashboard/payments" label="Pembayaran" icon="💳" />
-        <MenuItem to="/dashboard/notifications" label="Notifikasi" icon="🔔" />
+        <MenuItem to="/dashboard" label="Dashboard" icon={LayoutDashboard} />
+        <MenuItem to="/dashboard/profile" label="Profil Saya" icon={User} />
+        <MenuItem to="/dashboard/my-courses" label="Kursus Saya" icon={BookOpen} />
+        <MenuItem to="/dashboard/certificates" label="Sertifikat" icon={Award} />
+        <MenuItem to="/dashboard/payments" label="Pembayaran" icon={CreditCard} />
+        <MenuItem to="/dashboard/notifications" label="Notifikasi" icon={Bell} />
 
-        {/* Jadi Creator - Only show for regular users (not ORGANIZER, AFFILIATE, or ADMIN) */}
+        {/* Jadi Creator */}
         {!roles.includes("ORGANIZER") && !roles.includes("AFFILIATE") && !roles.includes("ADMIN") && (
-          <MenuItem to="/dashboard/become-creator" label="Jadi Creator" icon="🚀" />
+          <div style={{ margin: "16px", padding: "1px", background: "linear-gradient(90deg, #f59e0b, #ef4444)", borderRadius: "13px" }}>
+            <Link to="/dashboard/become-creator" style={{ textDecoration: "none", display: "block", background: "#1e293b", borderRadius: "12px", overflow: "hidden" }}>
+              <div style={{ padding: "12px 16px", display: "flex", alignItems: "center", gap: "12px", color: "white" }}>
+                <Rocket size={20} color="#f59e0b" />
+                <span style={{ fontWeight: "600" }}>Jadi Creator</span>
+              </div>
+            </Link>
+          </div>
         )}
 
         {/* AFFILIATE Menu */}
         {roles.includes("AFFILIATE") && (
           <>
             <SectionTitle>Affiliate Area</SectionTitle>
-            <MenuItem to="/dashboard/affiliate" label="Dashboard" icon="📊" />
-            <MenuItem to="/dashboard/affiliate/submit" label="Ajukan Event" icon="➕" />
-            <MenuItem to="/dashboard/affiliate/events" label="Event Saya" icon="📦" />
-            <MenuItem to="/dashboard/affiliate/withdraw" label="Tarik Dana" icon="💸" />
+            <MenuItem to="/dashboard/affiliate" label="Dashboard" icon={BarChart2} />
+            <MenuItem to="/dashboard/affiliate/submit" label="Ajukan Event" icon={PlusCircle} />
+            <MenuItem to="/dashboard/affiliate/events" label="Event Saya" icon={Package} />
+            <MenuItem to="/dashboard/affiliate/withdraw" label="Tarik Dana" icon={DollarSign} />
           </>
         )}
 
@@ -116,44 +202,42 @@ export default function Sidebar() {
         {roles.includes("ORGANIZER") && (
           <>
             <SectionTitle>Creator Area</SectionTitle>
-            <MenuItem to="/dashboard/org" label="Dashboard Org" icon="🏢" />
-            <MenuItem to="/dashboard/org/events" label="Report" icon="📊" />
-            <MenuItem to="/dashboard/org/withdraw" label="Tarik Dana" icon="💸" />
+            <MenuItem to="/dashboard/org" label="Dashboard Org" icon={Building} />
+            <MenuItem to="/dashboard/org/events" label="Manajemen Event" icon={FileText} />
+            <MenuItem to="/dashboard/org/withdraw" label="Tarik Dana" icon={DollarSign} />
           </>
         )}
 
-        {/* ADMIN Menu - Ordered by priority */}
+        {/* ADMIN Menu */}
         {roles.includes("ADMIN") && (
           <>
             <SectionTitle>Admin Area</SectionTitle>
-            <MenuItem to="/dashboard/admin/official-org" label="Official Org" icon="🏛️" />
-            <MenuItem to="/dashboard/admin/organizations" label="Kelola Organisasi" icon="🏢" />
-            <MenuItem to="/dashboard/admin/approvals" label="Persetujuan Org" icon="📝" />
-            <MenuItem to="/dashboard/admin/affiliates" label="Pengajuan Affiliate" icon="🤝" />
-            <MenuItem to="/dashboard/admin/users" label="Kelola User" icon="👥" />
-            <MenuItem to="/dashboard/admin/featured" label="Featured Banner" icon="⭐" />
-            <MenuItem to="/dashboard/admin/reports" label="Kelola Laporan" icon="📢" />
+            <MenuItem to="/dashboard/admin/official-org" label="Official Org" icon={Building} />
+            <MenuItem to="/dashboard/admin/organizations" label="Kelola Organisasi" icon={Building} />
+            <MenuItem to="/dashboard/admin/approvals" label="Persetujuan Org" icon={CheckSquare} />
+            <MenuItem to="/dashboard/admin/affiliates" label="Pengajuan Affiliate" icon={Users} />
+            <MenuItem to="/dashboard/admin/users" label="Kelola User" icon={Users} />
+            <MenuItem to="/dashboard/admin/featured" label="Featured Banner" icon={Star} />
+            <MenuItem to="/dashboard/admin/reports" label="Kelola Laporan" icon={Megaphone} />
           </>
         )}
       </div>
 
-      {/* Footer - Home & Logout */}
+      {/* Footer */}
       <div style={{
-        padding: "16px",
-        borderTop: "1px solid #e2e8f0",
-        display: "flex",
-        flexDirection: "column",
-        gap: "10px"
+        padding: "20px 16px",
+        borderTop: "1px solid #1e293b",
+        background: "#0f172a"
       }}>
         <Link
           to="/"
           style={{
             width: "100%",
             padding: "12px",
-            background: "linear-gradient(135deg, #3b82f6, #2563eb)",
-            color: "white",
-            border: "none",
-            borderRadius: "8px",
+            background: "transparent",
+            color: "#94a3b8",
+            border: "1px solid #334155",
+            borderRadius: "10px",
             cursor: "pointer",
             fontWeight: "600",
             fontSize: "0.9rem",
@@ -161,21 +245,30 @@ export default function Sidebar() {
             alignItems: "center",
             justifyContent: "center",
             gap: "8px",
-            transition: "all 0.2s ease",
-            textDecoration: "none"
+            marginBottom: "12px",
+            textDecoration: "none",
+            transition: "all 0.2s"
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.borderColor = "#64748b";
+            e.currentTarget.style.color = "white";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.borderColor = "#334155";
+            e.currentTarget.style.color = "#94a3b8";
           }}
         >
-          🏠 Kembali ke Home
+          <Home size={18} /> Kembali ke Home
         </Link>
         <button
           onClick={handleLogout}
           style={{
             width: "100%",
             padding: "12px",
-            background: "linear-gradient(135deg, #ef4444, #dc2626)",
+            background: "#ef4444",
             color: "white",
             border: "none",
-            borderRadius: "8px",
+            borderRadius: "10px",
             cursor: "pointer",
             fontWeight: "600",
             fontSize: "0.9rem",
@@ -183,10 +276,12 @@ export default function Sidebar() {
             alignItems: "center",
             justifyContent: "center",
             gap: "8px",
-            transition: "all 0.2s ease"
+            transition: "all 0.2s"
           }}
+          onMouseEnter={(e) => e.currentTarget.style.background = "#dc2626"}
+          onMouseLeave={(e) => e.currentTarget.style.background = "#ef4444"}
         >
-          🚪 Keluar
+          <LogOut size={18} /> Keluar
         </button>
       </div>
     </div>

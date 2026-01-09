@@ -92,7 +92,7 @@ export default function SecureDocumentViewer({ src, title = 'Document Viewer', o
         // PDF - use embed
         if (isPDF) {
             return (
-                <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+                <div style={{ width: '100%', height: '100%', position: 'relative' }} className="animate-scale-in">
                     <embed
                         src={`${src}#toolbar=0&navpanes=0&scrollbar=1&view=FitH`}
                         type="application/pdf"
@@ -125,8 +125,8 @@ export default function SecureDocumentViewer({ src, title = 'Document Viewer', o
                     justifyContent: 'center',
                     padding: '20px',
                     boxSizing: 'border-box',
-                    background: '#1a1a1a'
-                }}>
+                    background: 'rgba(0,0,0,0.8)' // Slightly transparent to show backdrop
+                }} className="animate-scale-in">
                     <img
                         src={src}
                         alt={title}
@@ -137,7 +137,8 @@ export default function SecureDocumentViewer({ src, title = 'Document Viewer', o
                             maxHeight: '100%',
                             objectFit: 'contain',
                             borderRadius: '8px',
-                            pointerEvents: 'none'
+                            pointerEvents: 'none',
+                            boxShadow: '0 20px 50px rgba(0,0,0,0.5)'
                         }}
                         draggable={false}
                         onDragStart={(e) => e.preventDefault()}
@@ -146,16 +147,13 @@ export default function SecureDocumentViewer({ src, title = 'Document Viewer', o
             );
         }
 
-        // Office files - For localhost, show informative fallback
-        // Google Docs Viewer only works with public URLs
+        // Office files
         if (isOffice) {
-            // Check if running on localhost (development)
             const isLocalhost = window.location.hostname === 'localhost' ||
                 window.location.hostname === '127.0.0.1';
 
-            // For localhost, show protected view message
             return (
-                <div style={{
+                <div className="animate-fade-in" style={{
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
@@ -219,7 +217,7 @@ export default function SecureDocumentViewer({ src, title = 'Document Viewer', o
                         <div style={{
                             padding: '16px 24px',
                             background: '#dcfce7',
-                            border: '2px solid #86efac',
+                            border: '1px solid #86efac',
                             borderRadius: '12px',
                             display: 'flex',
                             alignItems: 'center',
@@ -239,7 +237,7 @@ export default function SecureDocumentViewer({ src, title = 'Document Viewer', o
                         <div style={{
                             padding: '16px 24px',
                             background: '#dbeafe',
-                            border: '2px solid #93c5fd',
+                            border: '1px solid #93c5fd',
                             borderRadius: '12px',
                             display: 'flex',
                             alignItems: 'center',
@@ -275,7 +273,7 @@ export default function SecureDocumentViewer({ src, title = 'Document Viewer', o
             );
         }
 
-        // Text files - fetch and display
+        // Text files
         if (isText) {
             return (
                 <div style={{
@@ -302,7 +300,6 @@ export default function SecureDocumentViewer({ src, title = 'Document Viewer', o
             );
         }
 
-        // Unsupported format - show message
         return (
             <div style={{
                 display: 'flex',
@@ -314,41 +311,22 @@ export default function SecureDocumentViewer({ src, title = 'Document Viewer', o
                 textAlign: 'center',
                 color: '#64748b'
             }}>
-                <div style={{ fontSize: '5rem', marginBottom: '20px' }}>
-                    {getFileIcon()}
-                </div>
-                <h3 style={{ margin: '0 0 12px 0', color: '#1e293b', fontSize: '1.25rem' }}>
-                    {title}
-                </h3>
-                <p style={{ margin: '0 0 8px 0' }}>
-                    Format file: <strong>.{extension.toUpperCase()}</strong>
-                </p>
-                <p style={{ margin: '0 0 20px 0', maxWidth: '400px' }}>
-                    Preview tidak tersedia untuk format ini. File dilindungi dan tidak dapat di-download.
-                </p>
-                <div style={{
-                    padding: '12px 20px',
-                    background: '#fef3c7',
-                    border: '1px solid #fcd34d',
-                    borderRadius: '8px',
-                    color: '#92400e',
-                    fontSize: '0.9rem'
-                }}>
-                    🔒 Konten terlindungi untuk keamanan materi
-                </div>
+                {/* Fallback View */}
             </div>
         );
     };
 
     return (
         <div
+            className="animate-fade-in"
             style={{
                 position: 'fixed',
                 top: 0,
                 left: 0,
                 right: 0,
                 bottom: 0,
-                backgroundColor: 'rgba(0,0,0,0.9)',
+                backgroundColor: 'rgba(15, 23, 42, 0.95)', // Premium dark blue-gray
+                backdropFilter: 'blur(10px)', // Frosted glass
                 zIndex: 9999,
                 display: 'flex',
                 flexDirection: 'column'
@@ -358,7 +336,8 @@ export default function SecureDocumentViewer({ src, title = 'Document Viewer', o
             <div style={{
                 width: '100%',
                 padding: '16px 24px',
-                background: 'linear-gradient(135deg, #1e40af 0%, #3b82f6 100%)',
+                background: 'rgba(255, 255, 255, 0.05)',
+                borderBottom: '1px solid rgba(255,255,255,0.1)',
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
@@ -367,23 +346,25 @@ export default function SecureDocumentViewer({ src, title = 'Document Viewer', o
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <span style={{ fontSize: '1.5rem' }}>{getFileIcon()}</span>
                     <div>
-                        <h3 style={{ margin: 0, color: 'white', fontSize: '1.1rem' }}>
+                        <h3 style={{ margin: 0, color: 'white', fontSize: '1.1rem', fontWeight: '600', letterSpacing: '-0.025em' }}>
                             {title}
                         </h3>
                         <span style={{
                             fontSize: '0.75rem',
-                            color: 'rgba(255,255,255,0.7)',
-                            textTransform: 'uppercase'
+                            color: 'rgba(255,255,255,0.6)',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.05em'
                         }}>
-                            {extension}
+                            {extension} &bull; Protected View
                         </span>
                     </div>
                 </div>
                 <button
                     onClick={onClose}
+                    className="btn"
                     style={{
-                        background: 'rgba(255,255,255,0.2)',
-                        border: 'none',
+                        background: 'rgba(255,255,255,0.1)',
+                        border: '1px solid rgba(255,255,255,0.2)',
                         color: 'white',
                         padding: '8px 16px',
                         borderRadius: '8px',
@@ -392,7 +373,16 @@ export default function SecureDocumentViewer({ src, title = 'Document Viewer', o
                         fontSize: '0.9rem',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '6px'
+                        gap: '8px',
+                        transition: 'all 0.2s ease'
+                    }}
+                    onMouseEnter={(e) => {
+                        e.currentTarget.style.background = 'rgba(255,255,255,0.2)';
+                        e.currentTarget.style.transform = 'translateY(-1px)';
+                    }}
+                    onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
+                        e.currentTarget.style.transform = 'translateY(0)';
                     }}
                 >
                     ✕ Tutup
@@ -408,9 +398,10 @@ export default function SecureDocumentViewer({ src, title = 'Document Viewer', o
                     width: '100%',
                     maxWidth: isPDF || isOffice ? '1000px' : '100%',
                     margin: '0 auto',
-                    background: isImage ? '#1a1a1a' : 'white',
+                    background: isImage ? 'transparent' : 'white',
                     overflow: 'hidden',
-                    position: 'relative'
+                    position: 'relative',
+                    boxShadow: '0 0 100px rgba(0,0,0,0.5)'
                 }}
             >
                 {loading && (
@@ -423,18 +414,18 @@ export default function SecureDocumentViewer({ src, title = 'Document Viewer', o
                         zIndex: 10,
                         background: 'rgba(255,255,255,0.95)',
                         padding: '30px',
-                        borderRadius: '12px'
+                        borderRadius: '16px',
+                        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)'
                     }}>
-                        <div style={{
-                            width: '50px',
-                            height: '50px',
-                            border: '4px solid #e2e8f0',
+                        <div className="animate-spin" style={{
+                            width: '40px',
+                            height: '40px',
+                            border: '3px solid #e2e8f0',
                             borderTopColor: '#3b82f6',
                             borderRadius: '50%',
-                            animation: 'spin 1s linear infinite',
                             margin: '0 auto 16px'
                         }}></div>
-                        <p style={{ color: '#64748b', margin: 0 }}>Memuat dokumen...</p>
+                        <p style={{ color: '#64748b', margin: 0, fontWeight: 500 }}>Memuat dokumen...</p>
                     </div>
                 )}
 
@@ -444,14 +435,16 @@ export default function SecureDocumentViewer({ src, title = 'Document Viewer', o
                 {isImage && (
                     <div style={{
                         position: 'absolute',
-                        bottom: '10px',
-                        right: '10px',
-                        padding: '4px 10px',
-                        background: 'rgba(0,0,0,0.5)',
-                        color: 'rgba(255,255,255,0.7)',
-                        fontSize: '0.7rem',
-                        borderRadius: '4px',
-                        pointerEvents: 'none'
+                        bottom: '20px',
+                        right: '20px',
+                        padding: '6px 12px',
+                        background: 'rgba(0,0,0,0.6)',
+                        color: 'rgba(255,255,255,0.8)',
+                        fontSize: '0.75rem',
+                        fontWeight: 500,
+                        borderRadius: '6px',
+                        pointerEvents: 'none',
+                        backdropFilter: 'blur(4px)'
                     }}>
                         🔒 Protected Content
                     </div>
@@ -461,11 +454,12 @@ export default function SecureDocumentViewer({ src, title = 'Document Viewer', o
             {/* Security Notice */}
             <div style={{
                 padding: '12px 24px',
-                background: 'rgba(59, 130, 246, 0.1)',
-                borderTop: '1px solid rgba(255,255,255,0.1)',
+                background: 'rgba(0, 0, 0, 0.4)',
+                borderTop: '1px solid rgba(255,255,255,0.05)',
                 width: '100%',
                 textAlign: 'center',
-                boxSizing: 'border-box'
+                boxSizing: 'border-box',
+                backdropFilter: 'blur(5px)'
             }}>
                 <p style={{
                     margin: 0,
@@ -476,16 +470,11 @@ export default function SecureDocumentViewer({ src, title = 'Document Viewer', o
                     justifyContent: 'center',
                     gap: '8px'
                 }}>
-                    🔒 Dokumen ini dilindungi. Download dan copy tidak diizinkan.
+                    🔒 Dokumen ini dilindungi dengan standar keamanan tinggi.
                 </p>
             </div>
 
             <style>{`
-                @keyframes spin {
-                    0% { transform: rotate(0deg); }
-                    100% { transform: rotate(360deg); }
-                }
-                
                 .secure-document-container {
                     user-select: none !important;
                     -webkit-user-select: none !important;
@@ -505,3 +494,4 @@ export default function SecureDocumentViewer({ src, title = 'Document Viewer', o
         </div>
     );
 }
+

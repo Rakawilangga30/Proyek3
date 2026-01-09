@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import api from '../api';
+import Modal from './Modal';
 
 export default function CertificateViewer({ eventId, onClose }) {
     const [loading, setLoading] = useState(true);
@@ -166,82 +167,68 @@ export default function CertificateViewer({ eventId, onClose }) {
     };
 
     if (loading) {
-        return <div style={modalOverlay}><div style={modalContent}><p>Memuat sertifikat...</p></div></div>;
+        return (
+            <Modal isOpen={true} onClose={onClose} title="Memuat Sertifikat..." size="sm" hideCloseButton={true}>
+                <div style={{ textAlign: 'center', padding: '20px' }}>
+                    <div className="animate-spin" style={{ width: '30px', height: '30px', border: '3px solid #e2e8f0', borderTopColor: '#3b82f6', borderRadius: '50%', margin: '0 auto 10px' }}></div>
+                    <p>Menyiapkan sertifikat kelulusan...</p>
+                </div>
+            </Modal>
+        );
     }
 
     if (error) {
         return (
-            <div style={modalOverlay}>
-                <div style={modalContent}>
-                    <h3>❌ Error</h3>
+            <Modal isOpen={true} onClose={onClose} title="Error" size="sm">
+                <div style={{ textAlign: 'center', padding: '20px' }}>
+                    <h3 style={{ color: '#ef4444' }}>❌ Gagal Memuat</h3>
                     <p style={{ color: '#64748b' }}>{error}</p>
-                    <button onClick={onClose} style={btnPrimary}>Tutup</button>
+                    <button onClick={onClose} className="btn btn-secondary">Tutup</button>
                 </div>
-            </div>
+            </Modal>
         );
     }
 
     if (!data?.has_certificate) {
         return (
-            <div style={modalOverlay}>
-                <div style={{ ...modalContent, textAlign: 'center' }}>
+            <Modal isOpen={true} onClose={onClose} title="Sertifikat Belum Tersedia" size="sm">
+                <div style={{ textAlign: 'center', padding: '20px' }}>
                     <div style={{ fontSize: '4rem', marginBottom: '16px' }}>📜</div>
-                    <h3>Sertifikat Belum Tersedia</h3>
+                    <h3 style={{ margin: '0 0 10px 0' }}>Belum Lulus</h3>
                     <p style={{ color: '#64748b', marginBottom: '16px' }}>
                         {data?.message || 'Selesaikan semua kuis dengan skor minimal untuk mendapatkan sertifikat.'}
                     </p>
                     {data?.total_score !== undefined && (
-                        <div style={{ marginBottom: '20px' }}>
-                            <div style={{ fontWeight: 'bold', fontSize: '1.5rem', color: '#f59e0b' }}>
+                        <div style={{ marginBottom: '20px', padding: '15px', background: '#fffbeb', borderRadius: '8px', border: '1px solid #fcd34d' }}>
+                            <div style={{ fontWeight: 'bold', fontSize: '1.5rem', color: '#b45309' }}>
                                 {data.total_score?.toFixed(1)}%
                             </div>
-                            <div style={{ fontSize: '0.9rem', color: '#64748b' }}>
+                            <div style={{ fontSize: '0.9rem', color: '#92400e' }}>
                                 Skor saat ini (minimal {data.min_required}%)
                             </div>
                         </div>
                     )}
-                    <button onClick={onClose} style={btnPrimary}>Tutup</button>
+                    <button onClick={onClose} className="btn btn-primary">Tutup</button>
                 </div>
-            </div>
+            </Modal>
         );
     }
 
     return (
-        <div style={modalOverlay}>
-            <div style={{ ...modalContent, maxWidth: '900px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                    <h2 style={{ margin: 0 }}>🎓 Sertifikat Anda</h2>
-                    <button onClick={onClose} style={btnSecondary}>✖</button>
-                </div>
-
-                <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-                    <canvas
-                        ref={canvasRef}
-                        style={{ maxWidth: '100%', border: '1px solid #e2e8f0', borderRadius: '8px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}
-                    />
-                </div>
-
-                <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
-                    <button onClick={handleDownload} style={btnPrimary}>
-                        📥 Download Sertifikat
-                    </button>
-                    <button onClick={onClose} style={btnSecondary}>Tutup</button>
-                </div>
+        <Modal isOpen={true} onClose={onClose} title="🎓 Sertifikat Kelulusan" size="xl">
+            <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+                <canvas
+                    ref={canvasRef}
+                    style={{ maxWidth: '100%', height: 'auto', border: '1px solid #e2e8f0', borderRadius: '8px', boxShadow: '0 4px 15px rgba(0,0,0,0.1)' }}
+                />
             </div>
-        </div>
+
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', marginTop: '20px' }}>
+                <button onClick={handleDownload} className="btn btn-primary">
+                    📥 Download Sertifikat (PNG)
+                </button>
+                <button onClick={onClose} className="btn btn-secondary">Tutup</button>
+            </div>
+        </Modal>
     );
 }
-
-const modalOverlay = {
-    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-    background: 'rgba(0,0,0,0.5)', display: 'flex',
-    alignItems: 'center', justifyContent: 'center', zIndex: 1000
-};
-
-const modalContent = {
-    background: 'white', padding: '24px', borderRadius: '12px',
-    width: '100%', maxWidth: '500px', maxHeight: '90vh', overflow: 'auto'
-};
-
-const btnPrimary = { padding: '10px 20px', background: '#3b82f6', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '500' };
-const btnSecondary = { padding: '8px 16px', background: '#f1f5f9', color: '#374151', border: '1px solid #d1d5db', borderRadius: '8px', cursor: 'pointer' };

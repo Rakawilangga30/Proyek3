@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { Mail, Lock, ArrowRight, Loader2 } from "lucide-react";
+import toast from 'react-hot-toast';
 import api from "../api";
 
 export default function Login() {
@@ -37,23 +39,24 @@ export default function Login() {
             localStorage.setItem("token", res.data.token);
             localStorage.setItem("user", JSON.stringify(userData));
 
-            alert("Login Berhasil!");
+            toast.success("Login Berhasil!");
 
             // REDIRECT LOGIC - User biasa ke landing page, Admin/Organizer ke dashboard
-            if (formattedRoles.includes("ADMIN")) {
-                navigate("/dashboard/admin/users");
-            } else if (formattedRoles.includes("ORGANIZER")) {
-                navigate("/dashboard/org/events");
-            } else {
-                // User biasa langsung ke halaman utama (landing page)
-                navigate("/");
-            }
-
-            setTimeout(() => { window.location.reload() }, 100);
+            setTimeout(() => {
+                if (formattedRoles.includes("ADMIN")) {
+                    navigate("/dashboard/admin/users");
+                } else if (formattedRoles.includes("ORGANIZER")) {
+                    navigate("/dashboard/org/events");
+                } else {
+                    // User biasa langsung ke halaman utama (landing page)
+                    navigate("/");
+                }
+                window.location.reload();
+            }, 1000);
 
         } catch (error) {
             console.error(error);
-            alert("Login Gagal: " + (error.response?.data?.error || "Cek Email/Password"));
+            toast.error("Login Gagal: " + (error.response?.data?.error || "Cek Email/Password"));
         } finally {
             setLoading(false);
         }
@@ -65,146 +68,120 @@ export default function Login() {
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            background: "linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)",
+            background: "linear-gradient(135deg, var(--primary-50) 0%, var(--primary-100) 100%)",
             padding: "20px"
         }}>
-            <div style={{
+            <div className="animate-scale-in" style={{
                 width: "100%",
                 maxWidth: "420px",
                 padding: "40px",
-                background: "white",
-                borderRadius: "16px",
-                boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)"
+                background: "rgba(255, 255, 255, 0.9)",
+                backdropFilter: "blur(10px)",
+                borderRadius: "24px",
+                boxShadow: "0 20px 40px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+                border: "1px solid rgba(255, 255, 255, 0.5)"
             }}>
                 {/* Header */}
                 <div style={{ textAlign: "center", marginBottom: "32px" }}>
                     <div style={{
                         width: "64px",
                         height: "64px",
-                        background: "linear-gradient(135deg, #3b82f6, #1e40af)",
+                        background: "linear-gradient(135deg, var(--primary-500), var(--primary-700))",
                         borderRadius: "16px",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
                         margin: "0 auto 16px",
-                        fontSize: "28px"
+                        color: "white",
+                        boxShadow: "0 10px 15px -3px rgba(59, 130, 246, 0.3)"
                     }}>
-                        🔐
+                        <Lock size={32} />
                     </div>
                     <h2 style={{
                         margin: "0 0 8px 0",
-                        color: "#1e293b",
-                        fontSize: "1.5rem",
-                        fontWeight: "700"
+                        color: "var(--gray-900)",
+                        fontSize: "1.75rem",
+                        fontWeight: "700",
+                        letterSpacing: "-0.025em"
                     }}>
                         Masuk Akun
                     </h2>
                     <p style={{
-                        color: "#64748b",
+                        color: "var(--gray-500)",
                         margin: 0,
-                        fontSize: "0.9rem"
+                        fontSize: "0.95rem"
                     }}>
-                        Selamat datang kembali! Silakan login.
+                        Selamat datang kembali! Silakan login untuk melanjutkan.
                     </p>
                 </div>
 
                 {/* Form */}
                 <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
                     <div>
-                        <label style={{
-                            display: "block",
-                            marginBottom: "6px",
-                            fontWeight: "500",
-                            color: "#374151",
-                            fontSize: "0.875rem"
-                        }}>
-                            Email
-                        </label>
-                        <input
-                            type="email"
-                            placeholder="nama@email.com"
-                            required
-                            value={email}
-                            onChange={e => setEmail(e.target.value)}
-                            style={{
-                                width: "100%",
-                                padding: "12px 16px",
-                                borderRadius: "8px",
-                                border: "1px solid #d1d5db",
-                                fontSize: "0.95rem",
-                                transition: "all 0.2s ease",
-                                boxSizing: "border-box"
-                            }}
-                        />
+                        <label className="form-label">Email</label>
+                        <div style={{ position: "relative" }}>
+                            <Mail size={18} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--gray-400)" }} />
+                            <input
+                                type="email"
+                                className="form-input"
+                                placeholder="nama@email.com"
+                                required
+                                value={email}
+                                onChange={e => setEmail(e.target.value)}
+                                style={{ paddingLeft: "40px" }}
+                            />
+                        </div>
                     </div>
 
                     <div>
-                        <label style={{
-                            display: "block",
-                            marginBottom: "6px",
-                            fontWeight: "500",
-                            color: "#374151",
-                            fontSize: "0.875rem"
-                        }}>
-                            Password
-                        </label>
-                        <input
-                            type="password"
-                            placeholder="••••••••"
-                            required
-                            value={password}
-                            onChange={e => setPassword(e.target.value)}
-                            style={{
-                                width: "100%",
-                                padding: "12px 16px",
-                                borderRadius: "8px",
-                                border: "1px solid #d1d5db",
-                                fontSize: "0.95rem",
-                                transition: "all 0.2s ease",
-                                boxSizing: "border-box"
-                            }}
-                        />
+                        <label className="form-label">Password</label>
+                        <div style={{ position: "relative" }}>
+                            <Lock size={18} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--gray-400)" }} />
+                            <input
+                                type="password"
+                                className="form-input"
+                                placeholder="••••••••"
+                                required
+                                value={password}
+                                onChange={e => setPassword(e.target.value)}
+                                style={{ paddingLeft: "40px" }}
+                            />
+                        </div>
+                    </div>
+
+                    <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                        <Link to="/forgot-password" style={{ fontSize: "0.85rem", color: "var(--primary-600)", fontWeight: "500" }}>
+                            Lupa password?
+                        </Link>
                     </div>
 
                     <button
                         type="submit"
                         disabled={loading}
-                        style={{
-                            width: "100%",
-                            padding: "14px",
-                            background: loading
-                                ? "#94a3b8"
-                                : "linear-gradient(135deg, #3b82f6, #2563eb)",
-                            color: "white",
-                            border: "none",
-                            borderRadius: "8px",
-                            cursor: loading ? "not-allowed" : "pointer",
-                            fontWeight: "600",
-                            fontSize: "1rem",
-                            transition: "all 0.2s ease",
-                            marginTop: "8px"
-                        }}
+                        className="btn btn-primary btn-full"
+                        style={{ padding: "12px" }}
                     >
-                        {loading ? "Memproses..." : "Masuk"}
+                        {loading ? (
+                            <>
+                                <Loader2 className="animate-spin" size={20} /> Memproses...
+                            </>
+                        ) : (
+                            <>
+                                Masuk <ArrowRight size={20} />
+                            </>
+                        )}
                     </button>
                 </form>
 
                 {/* Footer */}
-                <p style={{
-                    textAlign: "center",
-                    marginTop: "24px",
-                    fontSize: "0.9rem",
-                    color: "#64748b"
-                }}>
-                    Belum punya akun?{" "}
-                    <Link to="/register" style={{
-                        color: "#3b82f6",
-                        fontWeight: "600",
-                        textDecoration: "none"
-                    }}>
-                        Daftar disini
-                    </Link>
-                </p>
+                <div style={{ marginTop: "32px", textAlign: "center" }}>
+                    <p style={{ fontSize: "0.9rem", color: "var(--gray-500)" }}>
+                        Belum punya akun?{" "}
+                        <Link to="/register" style={{ color: "var(--primary-600)", fontWeight: "600" }}>
+                            Daftar disini
+                        </Link>
+                    </p>
+                </div>
             </div>
         </div>
     );

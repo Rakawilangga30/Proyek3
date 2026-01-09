@@ -490,11 +490,45 @@ func CheckPaymentStatus(c *gin.Context) {
 		return
 	}
 
-	// For localhost testing, just return current status and suggest simulation
+	// ----------------------------------------------
+	// FIX: Check status directly to Midtrans (Active Check)
+	// ----------------------------------------------
+	// This is important because on localhost, webhooks might not reach the server.
+	// We actively ask Midtrans: "What is the status of this order?"
+
+	transactionStatusResp, err := config.CoreClient.CheckTransaction(input.OrderID)
+	if err != nil {
+		// If check fails, just return current local status
+		c.JSON(http.StatusOK, gin.H{
+			"order_id":       input.OrderID,
+			"current_status": purchase.Status,
+			"message":        "Gagal cek ke Midtrans, status lokal: " + purchase.Status,
+		})
+		return
+	}
+
+	if transactionStatusResp != nil {
+		status := transactionStatusResp.TransactionStatus
+		
+		// If Midtrans says it's paid (capture/settlement), UPDATE OUR DB!
+		if status == "capture" || status == "settlement" {
+			// Call the same function used by Webhook
+			err := processSuccessfulPayment(input.OrderID, transactionStatusResp.GrossAmount)
+			if err != nil {
+				fmt.Printf("Error updating paid status: %v\n", err)
+			} else {
+				purchase.Status = "PAID" // Update local var for response
+			}
+		} else if status == "deny" || status == "cancel" || status == "expire" {
+			// Mark as FAILED
+			config.DB.Exec("UPDATE purchases SET status = 'FAILED' WHERE order_id = ?", input.OrderID)
+			purchase.Status = "FAILED"
+		}
+	}
+
 	c.JSON(http.StatusOK, gin.H{
-		"order_id":       input.OrderID,
-		"current_status": purchase.Status,
-		"message":        "Untuk testing di localhost, gunakan endpoint /api/user/payment/simulate-success dengan order_id ini",
+		"order_id": input.OrderID,
+		"status":   purchase.Status, // Return the updated status
 	})
 }
 

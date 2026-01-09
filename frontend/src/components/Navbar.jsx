@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { Search, Rocket, ChevronDown, LogOut, LayoutDashboard, User, LogIn, GraduationCap, Building2 } from "lucide-react";
 import api from "../api";
+import "./Navbar.css"; // Import the new CSS file
 
 export default function Navbar() {
   const navigate = useNavigate();
@@ -15,7 +17,6 @@ export default function Navbar() {
   const searchRef = useRef(null);
 
   useEffect(() => {
-    // Load data for search
     const loadData = async () => {
       try {
         const [eventsRes, orgsRes] = await Promise.all([
@@ -32,7 +33,6 @@ export default function Navbar() {
   }, []);
 
   useEffect(() => {
-    // Close dropdown when clicking outside
     const handleClickOutside = (e) => {
       if (searchRef.current && !searchRef.current.contains(e.target)) {
         setShowResults(false);
@@ -64,7 +64,6 @@ export default function Navbar() {
       } else if (searchType === "org") {
         setSearchResults({ events: [], organizations: filteredOrgs });
       } else {
-        // All - show both
         setSearchResults({ events: filteredEvents, organizations: filteredOrgs });
       }
       setShowResults(true);
@@ -78,7 +77,6 @@ export default function Navbar() {
     navigate("/login");
   };
 
-  // Helper to properly format thumbnail URLs
   const getThumbnailUrl = (url) => {
     if (!url) return null;
     let cleanUrl = url.replace(/^\/+/, '').replace(/\\/g, '/');
@@ -86,149 +84,116 @@ export default function Navbar() {
   };
 
   const getSearchTypeLabel = () => {
-    if (searchType === "event") return "🎓 Event";
-    if (searchType === "org") return "🏢 Organisasi";
-    return "🔍 Semua";
+    if (searchType === "event") return "Event";
+    if (searchType === "org") return "Organisasi";
+    return "Semua";
   };
 
   const totalResults = searchResults.events.length + searchResults.organizations.length;
 
   return (
-    <nav style={{
-      padding: "12px 32px",
-      background: "linear-gradient(135deg, #1e40af, #3b82f6)",
-      color: "white",
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: "center",
-      gap: "20px",
-      boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
-      position: "sticky",
-      top: 0,
-      zIndex: 100
-    }}>
+    <nav className="navbar-container animate-slide-down">
       {/* Logo */}
-      <Link to="/" style={{
-        fontSize: "1.5rem",
-        fontWeight: "700",
-        color: "white",
-        textDecoration: "none",
-        display: "flex",
-        alignItems: "center",
-        gap: "8px",
-        flexShrink: 0
-      }}>
-        🚀 Proyek3
+      <Link to="/" className="navbar-logo">
+        <div className="logo-icon-bg">
+          <Rocket size={22} strokeWidth={2.5} />
+        </div>
+        <span>Webinar</span>
       </Link>
 
-      {/* Search Bar - Center */}
-      <div ref={searchRef} style={{ position: "relative", flex: 1, maxWidth: "500px" }}>
-        <div style={{ display: "flex", alignItems: "stretch" }}>
+      {/* Search Bar */}
+      <div ref={searchRef} className="search-container">
+        <div className="search-wrapper">
           {/* Dropdown Button */}
           <div style={{ position: "relative" }}>
             <button
               onClick={() => setShowDropdown(!showDropdown)}
-              style={{
-                height: "100%",
-                padding: "10px 14px",
-                background: "rgba(255,255,255,0.95)",
-                border: "none",
-                borderRadius: "8px 0 0 8px",
-                cursor: "pointer",
-                fontWeight: "600",
-                fontSize: "0.85rem",
-                color: "#374151",
-                display: "flex",
-                alignItems: "center",
-                gap: "6px",
-                whiteSpace: "nowrap"
-              }}
+              className="dropdown-btn"
             >
+              <span style={{ color: "var(--primary-600)" }}>
+                {searchType === "event" ? <GraduationCap size={18} /> :
+                  searchType === "org" ? <Building2 size={18} /> :
+                    <Search size={18} />}
+              </span>
               {getSearchTypeLabel()}
-              <span style={{ fontSize: "0.7rem" }}>▼</span>
+              <ChevronDown size={14} style={{ opacity: 0.5 }} />
             </button>
 
-            {/* Dropdown Menu */}
             {showDropdown && (
-              <div style={{
+              <div className="animate-scale-in" style={{
                 position: "absolute",
-                top: "100%",
+                top: "calc(100% + 8px)",
                 left: 0,
                 background: "white",
-                borderRadius: "8px",
-                boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-                marginTop: "4px",
+                borderRadius: "16px",
+                boxShadow: "0 10px 25px -5px rgba(0,0,0,0.1)",
                 overflow: "hidden",
                 zIndex: 200,
-                minWidth: "150px"
+                minWidth: "180px",
+                border: "1px solid #f1f5f9",
+                padding: "6px"
               }}>
-                <button
-                  onClick={() => { setSearchType("all"); setShowDropdown(false); handleSearch({ target: { value: searchQuery } }); }}
-                  style={dropdownItemStyle(searchType === "all")}
-                >
-                  🔍 Semua
-                </button>
-                <button
-                  onClick={() => { setSearchType("event"); setShowDropdown(false); handleSearch({ target: { value: searchQuery } }); }}
-                  style={dropdownItemStyle(searchType === "event")}
-                >
-                  🎓 Event
-                </button>
-                <button
-                  onClick={() => { setSearchType("org"); setShowDropdown(false); handleSearch({ target: { value: searchQuery } }); }}
-                  style={dropdownItemStyle(searchType === "org")}
-                >
-                  🏢 Organisasi
-                </button>
+                {[
+                  { id: 'all', label: 'Semua', icon: <Search size={16} /> },
+                  { id: 'event', label: 'Event', icon: <GraduationCap size={16} /> },
+                  { id: 'org', label: 'Organisasi', icon: <Building2 size={16} /> }
+                ].map(opt => (
+                  <button
+                    key={opt.id}
+                    onClick={() => { setSearchType(opt.id); setShowDropdown(false); handleSearch({ target: { value: searchQuery } }); }}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "10px",
+                      width: "100%",
+                      padding: "10px 12px",
+                      border: "none",
+                      background: searchType === opt.id ? "#eff6ff" : "transparent",
+                      color: searchType === opt.id ? "#2563eb" : "#64748b",
+                      textAlign: "left",
+                      cursor: "pointer",
+                      fontSize: "0.9rem",
+                      fontWeight: searchType === opt.id ? "600" : "500",
+                      borderRadius: "8px",
+                      transition: "all 0.2s"
+                    }}
+                  >
+                    {opt.icon} {opt.label}
+                  </button>
+                ))}
               </div>
             )}
           </div>
 
           {/* Search Input */}
-          <input
-            type="text"
-            placeholder="Cari event atau organisasi..."
-            value={searchQuery}
-            onChange={handleSearch}
-            onFocus={() => searchQuery.length >= 2 && setShowResults(true)}
-            style={{
-              flex: 1,
-              padding: "10px 16px",
-              border: "none",
-              fontSize: "0.95rem",
-              borderRadius: "0 8px 8px 0",
-              minWidth: "150px"
-            }}
-          />
+          <div className="search-input-group">
+            <Search size={18} style={{ position: "absolute", left: "14px", color: "#94a3b8" }} />
+            <input
+              type="text"
+              placeholder="Cari event atau organisasi..."
+              value={searchQuery}
+              onChange={handleSearch}
+              onFocus={() => searchQuery.length >= 2 && setShowResults(true)}
+              className="search-input"
+            />
+          </div>
         </div>
 
         {/* Search Results */}
         {showResults && totalResults > 0 && (
-          <div style={{
-            position: "absolute",
-            top: "100%",
-            left: 0,
-            right: 0,
-            background: "white",
-            borderRadius: "12px",
-            boxShadow: "0 10px 25px rgba(0,0,0,0.15)",
-            marginTop: "8px",
-            maxHeight: "400px",
-            overflowY: "auto",
-            zIndex: 200
-          }}>
+          <div className="search-results-dropdown animate-slide-up">
             {/* Events Section */}
             {searchResults.events.length > 0 && (
               <>
                 <div style={{
-                  padding: "10px 16px",
-                  background: "#f8fafc",
-                  color: "#64748b",
-                  fontSize: "0.8rem",
-                  fontWeight: "600",
-                  borderBottom: "1px solid #e2e8f0"
+                  padding: "8px 12px",
+                  color: "#94a3b8",
+                  fontSize: "0.75rem",
+                  fontWeight: "700",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em"
                 }}>
-                  🎓 Event ({searchResults.events.length})
+                  Event Ditemukan
                 </div>
                 {searchResults.events.slice(0, 5).map((item) => (
                   <Link
@@ -245,12 +210,12 @@ export default function Navbar() {
                           style={{ width: "100%", height: "100%", objectFit: "cover" }}
                         />
                       ) : (
-                        <span style={{ fontSize: "1.2rem" }}>🎓</span>
+                        <GraduationCap size={20} color="#3b82f6" />
                       )}
                     </div>
                     <div>
-                      <div style={{ fontWeight: "600", color: "#1e293b" }}>{item.title}</div>
-                      <div style={{ fontSize: "0.75rem", color: "#64748b" }}>{item.category || "Umum"}</div>
+                      <div style={{ fontWeight: "600", color: "#1e293b", fontSize: "0.95rem" }}>{item.title}</div>
+                      <div style={{ fontSize: "0.8rem", color: "#64748b" }}>{item.category || "Umum"}</div>
                     </div>
                   </Link>
                 ))}
@@ -261,14 +226,15 @@ export default function Navbar() {
             {searchResults.organizations.length > 0 && (
               <>
                 <div style={{
-                  padding: "10px 16px",
-                  background: "#f8fafc",
-                  color: "#64748b",
-                  fontSize: "0.8rem",
-                  fontWeight: "600",
-                  borderBottom: "1px solid #e2e8f0"
+                  padding: "12px 12px 8px",
+                  color: "#94a3b8",
+                  fontSize: "0.75rem",
+                  fontWeight: "700",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                  borderTop: searchResults.events.length > 0 ? "1px solid #f1f5f9" : "none"
                 }}>
-                  🏢 Organisasi ({searchResults.organizations.length})
+                  Organisasi
                 </div>
                 {searchResults.organizations.slice(0, 5).map((item) => (
                   <Link
@@ -285,12 +251,12 @@ export default function Navbar() {
                           style={{ width: "100%", height: "100%", objectFit: "cover" }}
                         />
                       ) : (
-                        <span style={{ fontSize: "1.2rem" }}>🏢</span>
+                        <Building2 size={20} color="#3b82f6" />
                       )}
                     </div>
                     <div>
-                      <div style={{ fontWeight: "600", color: "#1e293b" }}>{item.name}</div>
-                      <div style={{ fontSize: "0.75rem", color: "#64748b" }}>{item.category || "Umum"}</div>
+                      <div style={{ fontWeight: "600", color: "#1e293b", fontSize: "0.95rem" }}>{item.name}</div>
+                      <div style={{ fontSize: "0.8rem", color: "#3b82f6" }}>Organisasi</div>
                     </div>
                   </Link>
                 ))}
@@ -301,123 +267,71 @@ export default function Navbar() {
 
         {/* No Results */}
         {showResults && searchQuery.length >= 2 && totalResults === 0 && (
-          <div style={{
-            position: "absolute",
-            top: "100%",
-            left: 0,
-            right: 0,
-            background: "white",
-            borderRadius: "12px",
-            boxShadow: "0 10px 25px rgba(0,0,0,0.15)",
-            marginTop: "8px",
-            padding: "24px",
-            textAlign: "center",
-            color: "#64748b",
-            zIndex: 200
-          }}>
-            <div style={{ fontSize: "2rem", marginBottom: "8px" }}>🔍</div>
-            Tidak ditemukan hasil untuk "{searchQuery}"
+          <div className="search-results-dropdown animate-scale-in" style={{ padding: "40px 20px", textAlign: "center" }}>
+            <div style={{ width: "60px", height: "60px", background: "#f1f5f9", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+              <Search size={24} color="#94a3b8" />
+            </div>
+            <p style={{ margin: 0, color: "#64748b" }}>Tidak ditemukan hasil untuk <br /><strong style={{ color: "#1e293b" }}>"{searchQuery}"</strong></p>
           </div>
         )}
       </div>
 
       {/* Navigation Links */}
-      <div style={{ display: "flex", alignItems: "center", gap: "16px", flexShrink: 0 }}>
-        <Link to="/" style={linkStyle}>Home</Link>
-        <Link to="/about" style={linkStyle}>About</Link>
+      <div className="nav-links">
+        <Link to="/" className="nav-item">Home</Link>
+        <Link to="/about" className="nav-item">About</Link>
 
         {user ? (
           <>
-            <Link to="/dashboard" style={{
-              ...linkStyle,
-              background: "rgba(255,255,255,0.2)",
-              padding: "8px 16px",
-              borderRadius: "8px",
-              fontWeight: "600"
-            }}>
+            <Link to="/dashboard" className="btn-dashboard">
+              <LayoutDashboard size={18} strokeWidth={2.5} />
               Dashboard
             </Link>
             <button
               onClick={handleLogout}
-              style={{
-                background: "rgba(239, 68, 68, 0.9)",
-                color: "white",
-                border: "none",
-                borderRadius: "8px",
-                padding: "8px 16px",
-                cursor: "pointer",
-                fontWeight: "500",
-                fontSize: "0.9rem",
-                transition: "all 0.2s ease"
-              }}
+              className="btn-logout"
+              title="Logout"
             >
-              Logout
+              <LogOut size={20} strokeWidth={2.5} style={{ marginLeft: "2px" }} />
             </button>
           </>
         ) : (
-          <>
-            <Link to="/login" style={linkStyle}>Login</Link>
-            <Link to="/register" style={{
-              background: "white",
-              color: "#2563eb",
-              padding: "10px 20px",
-              borderRadius: "8px",
-              textDecoration: "none",
-              fontWeight: "600",
-              fontSize: "0.9rem",
-              transition: "all 0.2s ease",
-              boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
-            }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px", borderLeft: "1px solid #8f9296ff", paddingLeft: "12px" }}>
+            <Link to="/login" className="btn-login">
+              <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                <LogIn size={18} /> Masuk
+              </span>
+            </Link>
+            <Link to="/register" className="btn-register">
               Daftar
             </Link>
-          </>
+          </div>
         )}
       </div>
     </nav>
   );
 }
 
-const linkStyle = {
-  color: "rgba(255,255,255,0.9)",
-  textDecoration: "none",
-  fontWeight: "500",
-  fontSize: "0.95rem",
-  padding: "6px 12px",
-  borderRadius: "6px",
-  transition: "all 0.2s ease"
-};
-
-const dropdownItemStyle = (isActive) => ({
-  display: "block",
-  width: "100%",
-  padding: "10px 16px",
-  border: "none",
-  background: isActive ? "#eff6ff" : "white",
-  color: isActive ? "#3b82f6" : "#374151",
-  textAlign: "left",
-  cursor: "pointer",
-  fontSize: "0.9rem",
-  fontWeight: isActive ? "600" : "400"
-});
-
 const resultItemStyle = {
   display: "flex",
   alignItems: "center",
   gap: "12px",
-  padding: "12px 16px",
-  borderBottom: "1px solid #e2e8f0",
+  padding: "10px 12px",
   textDecoration: "none",
-  transition: "background 0.2s ease"
+  transition: "all 0.2s ease",
+  borderRadius: "12px",
+  margin: "2px 0",
 };
 
 const resultThumbStyle = {
-  width: "40px",
-  height: "40px",
-  borderRadius: "8px",
+  width: "42px",
+  height: "42px",
+  borderRadius: "10px",
   background: "#f1f5f9",
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
   overflow: "hidden",
-  flexShrink: 0
+  flexShrink: 0,
+  border: "1px solid #e2e8f0"
 };

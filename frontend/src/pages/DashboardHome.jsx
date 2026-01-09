@@ -1,5 +1,11 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import api from "../api";
+import {
+    BookOpen, Calendar, Users, Activity,
+    ArrowRight, Bell, User, HelpCircle,
+    Briefcase, TrendingUp, Award, Zap
+} from "lucide-react";
 
 export default function DashboardHome() {
     const [user, setUser] = useState({});
@@ -17,317 +23,233 @@ export default function DashboardHome() {
 
     const fetchDashboardStats = async (userData) => {
         try {
-            // Fetch jumlah kursus yang dibeli (untuk semua user)
             const purchaseRes = await api.get("/user/purchases");
             const purchases = purchaseRes.data.purchases || [];
-            // Hitung jumlah event unik yang dibeli
             const uniqueEvents = new Set(purchases.map(p => p.event_id));
             setCourseCount(uniqueEvents.size);
 
-            // Jika user adalah Organizer, fetch data event dan pembeli
             if (userData.roles?.includes("ORGANIZER")) {
                 try {
-                    // Fetch events untuk menghitung published vs total
                     const eventsRes = await api.get("/organization/events");
                     const events = eventsRes.data.events || [];
                     setEventCount(events.length);
                     const published = events.filter(ev => ev.publish_status === "PUBLISHED").length;
                     setPublishedEventCount(published);
 
-                    // Fetch report untuk total buyers
                     const reportRes = await api.get("/organization/report");
                     const reportEvents = reportRes.data.events || [];
                     const buyers = reportEvents.reduce((sum, ev) => sum + (ev.buyers || 0), 0);
                     setTotalBuyers(buyers);
-                } catch (orgError) {
-                    console.log("Not an organization yet or error:", orgError);
+                } catch (err) {
+                    console.log("Org data error:", err);
                 }
             }
         } catch (error) {
-            console.error("Error fetching dashboard stats:", error);
+            console.error("Dashboard error:", error);
         } finally {
             setLoading(false);
         }
     };
 
+    const getGreeting = () => {
+        const hour = new Date().getHours();
+        if (hour < 12) return "Selamat Pagi";
+        if (hour < 15) return "Selamat Siang";
+        if (hour < 18) return "Selamat Sore";
+        return "Selamat Malam";
+    };
+
     return (
-        <div>
-            {/* Welcome Section */}
-            <div style={{
-                background: "linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #60a5fa 100%)",
-                padding: "32px",
-                borderRadius: "16px",
-                color: "white",
-                marginBottom: "32px",
-                position: "relative",
-                overflow: "hidden",
-                boxShadow: "0 10px 15px -3px rgba(59, 130, 246, 0.3)"
-            }}>
-                <div style={{
-                    position: "absolute",
-                    top: "-50%",
-                    right: "-5%",
-                    width: "200px",
-                    height: "200px",
-                    background: "rgba(255,255,255,0.1)",
-                    borderRadius: "50%"
-                }}></div>
-                <div style={{ position: "relative", zIndex: 1 }}>
-                    <h1 style={{ margin: "0 0 8px 0", fontSize: "1.75rem", fontWeight: "700" }}>
-                        👋 Halo, {user.name || "User"}!
+        <div style={{ paddingBottom: "40px" }}>
+            {/* ================= HERO ================= */}
+            <div
+                className="animate-fade-in"
+                style={{
+                    background: "linear-gradient(120deg, #2563eb, #1e40af)",
+                    borderRadius: "24px",
+                    padding: "40px",
+                    color: "white",
+                    marginBottom: "40px",
+                    position: "relative",
+                    overflow: "hidden",
+                    boxShadow: "0 20px 40px -10px rgba(37, 99, 235, 0.4)",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center"
+                }}
+            >
+                <div style={{ position: "relative", zIndex: 1, maxWidth: "600px" }}>
+                    <div
+                        style={{
+                            display: "inline-block",
+                            padding: "6px 16px",
+                            background: "rgba(255,255,255,0.15)",
+                            borderRadius: "20px",
+                            fontSize: "0.85rem",
+                            marginBottom: "16px",
+                            backdropFilter: "blur(4px)",
+                            border: "1px solid rgba(255,255,255,0.3)"
+                        }}
+                    >
+                        {new Date().toLocaleDateString("id-ID", {
+                            weekday: "long",
+                            day: "numeric",
+                            month: "long",
+                            year: "numeric"
+                        })}
+                    </div>
+
+                    <h1
+                        style={{
+                            margin: "0 0 12px 0",
+                            fontSize: "2.5rem",
+                            fontWeight: "800",
+                            lineHeight: "1.2"
+                        }}
+                    >
+                        {getGreeting()}, <br />
+                        <span style={{ opacity: 0.9 }}>
+                            {user.name || "User"}!
+                        </span>
                     </h1>
-                    <p style={{ margin: 0, opacity: 0.9 }}>
-                        Selamat datang kembali di Dashboard Proyek3.
+
+                    {/* ====== TEKS DIPERBAIKI ====== */}
+                    <p
+                        style={{
+                            margin: 0,
+                            fontSize: "1.1rem",
+                            fontWeight: "500",
+                            color: "#e0f2fe",
+                            textShadow: "0 2px 6px rgba(0,0,0,0.35)",
+                            letterSpacing: "0.2px"
+                        }}
+                    >
+                        Siap untuk melanjutkan pembelajaran hari ini?
                     </p>
                 </div>
             </div>
 
-            {/* Stats Cards */}
-            <div style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-                gap: "20px"
-            }}>
-                {/* Kursus Saya Card */}
-                <StatCard
-                    title="Kursus Saya"
-                    value={loading ? "..." : courseCount.toString()}
-                    icon="📚"
-                    color="#3b82f6"
-                    bgColor="#eff6ff"
-                />
+            {/* ================= STATISTIK ================= */}
+            <div style={{ marginBottom: "48px" }}>
+                <h3 style={{ marginBottom: "24px", color: "#1e293b" }}>
+                    Statistik Anda
+                </h3>
 
-                {/* Event Aktif Card - Only for Organizer */}
-                {user.roles?.includes("ORGANIZER") && (
+                <div
+                    style={{
+                        display: "grid",
+                        gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+                        gap: "24px"
+                    }}
+                >
                     <StatCard
-                        title="Event Aktif"
-                        value={loading ? "..." : `${publishedEventCount}/${eventCount}`}
-                        subtitle="Published / Total"
-                        icon="🎯"
-                        color="#22c55e"
-                        bgColor="#f0fdf4"
+                        title="Kursus Diikuti"
+                        value={loading ? "..." : courseCount}
+                        icon={BookOpen}
+                        color="blue"
+                        trend="+2 bulan ini"
                     />
-                )}
 
-                {/* Total Peserta - Only for Organizer */}
-                {user.roles?.includes("ORGANIZER") && (
-                    <StatCard
-                        title="Total Peserta"
-                        value={loading ? "..." : totalBuyers.toString()}
-                        icon="👥"
-                        color="#f59e0b"
-                        bgColor="#fffbeb"
-                    />
-                )}
+                    {user.roles?.includes("ORGANIZER") && (
+                        <>
+                            <StatCard
+                                title="Event Publik"
+                                value={loading ? "..." : publishedEventCount}
+                                subtitle={`dari ${eventCount} total event`}
+                                icon={Calendar}
+                                color="green"
+                            />
+                            <StatCard
+                                title="Total Peserta"
+                                value={loading ? "..." : totalBuyers}
+                                icon={Users}
+                                color="orange"
+                            />
+                        </>
+                    )}
 
-                {/* Pending Approval - Only for Admin */}
-                {user.roles?.includes("ADMIN") && (
                     <StatCard
-                        title="Pending Approval"
+                        title="Sertifikat"
                         value="0"
-                        icon="📋"
-                        color="#ef4444"
-                        bgColor="#fef2f2"
+                        icon={Award}
+                        color="purple"
+                        subtitle="Segera hadir"
                     />
-                )}
+                </div>
             </div>
 
-            {/* Quick Actions */}
-            <div style={{ marginTop: "32px" }}>
-                <h3 style={{
-                    margin: "0 0 16px 0",
-                    color: "#1e293b",
-                    fontSize: "1.1rem"
-                }}>
-                    ⚡ Aksi Cepat
-                </h3>
-                <div style={{
-                    display: "flex",
-                    flexWrap: "wrap",
-                    gap: "12px"
-                }}>
-                    <QuickActionButton
-                        label="Jelajahi Event"
-                        href="/"
-                        icon="🔍"
-                        primary
-                    />
-                    <QuickActionButton
-                        label="Kursus Saya"
-                        href="/dashboard/my-courses"
-                        icon="📚"
-                    />
-                    <QuickActionButton
-                        label="Notifikasi"
-                        href="/dashboard/notifications"
-                        icon="🔔"
-                    />
-                    <QuickActionButton
-                        label="Edit Profil"
-                        href="/dashboard/profile"
-                        icon="👤"
-                    />
-                    <QuickActionButton
-                        label="Laporkan Masalah"
-                        href="/dashboard/reports/create"
-                        icon="📝"
-                    />
-                    {user.roles?.includes("ORGANIZER") && (
-                        <QuickActionButton
-                            label="Kelola Organisasi"
-                            href="/dashboard/org"
-                            icon="🏢"
-                        />
-                    )}
-                    {user.roles?.includes("AFFILIATE") && (
-                        <QuickActionButton
-                            label="Dashboard Affiliate"
-                            href="/dashboard/affiliate"
-                            icon="🤝"
-                        />
-                    )}
-                </div>
+            {/* ================= AKSES CEPAT ================= */}
+            <h3 style={{ marginBottom: "24px", color: "#1e293b" }}>
+                Akses Cepat
+            </h3>
 
-                {/* Admin Quick Actions */}
-                {user.roles?.includes("ADMIN") && (
-                    <>
-                        <h3 style={{
-                            margin: "24px 0 16px 0",
-                            color: "#1e293b",
-                            fontSize: "1.1rem"
-                        }}>
-                            🛡️ Admin Area
-                        </h3>
-                        <div style={{
-                            display: "grid",
-                            gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-                            gap: "12px"
-                        }}>
-                            <QuickActionButton
-                                label="Official Org"
-                                href="/dashboard/admin/official-org"
-                                icon="🏛️"
-                                primary
-                            />
-                            <QuickActionButton
-                                label="Kelola Organisasi"
-                                href="/dashboard/admin/organizations"
-                                icon="🏢"
-                            />
-                            <QuickActionButton
-                                label="Persetujuan Org"
-                                href="/dashboard/admin/approvals"
-                                icon="📝"
-                            />
-                            <QuickActionButton
-                                label="Pengajuan Affiliate"
-                                href="/dashboard/admin/affiliates"
-                                icon="🤝"
-                            />
-                            <QuickActionButton
-                                label="Kelola User"
-                                href="/dashboard/admin/users"
-                                icon="👥"
-                            />
-                            <QuickActionButton
-                                label="Featured Banner"
-                                href="/dashboard/admin/featured"
-                                icon="⭐"
-                            />
-                            <QuickActionButton
-                                label="Kelola Laporan"
-                                href="/dashboard/admin/reports"
-                                icon="📢"
-                            />
-                        </div>
-                    </>
-                )}
+            <div
+                style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
+                    gap: "20px"
+                }}
+            >
+                <ActionCard label="Jelajahi Event" desc="Temukan webinar baru" href="/" icon={Zap} color="blue" />
+                <ActionCard label="Kursus Saya" desc="Lanjutkan belajar" href="/dashboard/my-courses" icon={BookOpen} color="indigo" />
+                <ActionCard label="Edit Profil" desc="Update data diri" href="/dashboard/profile" icon={User} color="slate" />
+                <ActionCard label="Bantuan" desc="Pusat bantuan" href="/dashboard/reports/create" icon={HelpCircle} color="teal" />
             </div>
         </div>
     );
 }
 
-// Stat Card Component
-function StatCard({ title, value, subtitle, icon, color, bgColor }) {
+/* ================= COMPONENTS ================= */
+
+function StatCard({ title, value, subtitle, icon: Icon, color, trend }) {
+    const colors = {
+        blue: { bg: "#eff6ff", text: "#3b82f6" },
+        green: { bg: "#f0fdf4", text: "#22c55e" },
+        orange: { bg: "#fff7ed", text: "#f97316" },
+        purple: { bg: "#faf5ff", text: "#a855f7" }
+    };
+
+    const theme = colors[color] || colors.blue;
+
     return (
         <div style={{
             background: "white",
+            borderRadius: "16px",
             padding: "24px",
-            borderRadius: "12px",
-            boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
-            border: "1px solid #e2e8f0",
-            display: "flex",
-            flexDirection: "column"
+            border: "1px solid #f1f5f9"
         }}>
-            <div style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "flex-start",
-                marginBottom: "12px"
-            }}>
-                <span style={{
-                    fontSize: "0.9rem",
-                    fontWeight: "500",
-                    color: "#64748b"
-                }}>
-                    {title}
-                </span>
-                <span style={{
-                    width: "40px",
-                    height: "40px",
-                    background: bgColor,
-                    borderRadius: "10px",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: "1.2rem"
-                }}>
-                    {icon}
-                </span>
+            <div style={{ background: theme.bg, color: theme.text, width: 48, height: 48, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <Icon size={24} />
             </div>
-            <span style={{
-                fontSize: "2rem",
-                fontWeight: "700",
-                color: color
-            }}>
-                {value}
-            </span>
-            {subtitle && (
-                <span style={{
-                    fontSize: "0.75rem",
-                    color: "#94a3b8",
-                    marginTop: "4px"
-                }}>
-                    {subtitle}
-                </span>
-            )}
+            <h4 style={{ margin: "12px 0 4px", fontSize: "2rem" }}>{value}</h4>
+            <p style={{ margin: 0, color: "#64748b" }}>{title}</p>
+            {subtitle && <small>{subtitle}</small>}
         </div>
     );
 }
 
-// Quick Action Button Component
-function QuickActionButton({ label, href, icon, primary }) {
+function ActionCard({ label, desc, href, icon: Icon, color }) {
+    const colors = {
+        blue: "#3b82f6",
+        indigo: "#6366f1",
+        slate: "#64748b",
+        teal: "#14b8a6"
+    };
+
+    const iconColor = colors[color];
+
     return (
-        <a
-            href={href}
-            style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "8px",
-                padding: "10px 18px",
-                background: primary ? "linear-gradient(135deg, #3b82f6, #2563eb)" : "white",
-                color: primary ? "white" : "#374151",
-                border: primary ? "none" : "1px solid #d1d5db",
-                borderRadius: "8px",
-                fontWeight: "500",
-                fontSize: "0.9rem",
-                textDecoration: "none",
-                transition: "all 0.2s ease",
-                boxShadow: "0 1px 2px 0 rgba(0, 0, 0, 0.05)"
-            }}
-        >
-            <span>{icon}</span>
-            {label}
-        </a>
+        <Link to={href} style={{ textDecoration: "none" }}>
+            <div style={{
+                background: "white",
+                padding: "20px",
+                borderRadius: "16px",
+                border: "1px solid #e2e8f0"
+            }}>
+                <Icon size={24} color={iconColor} />
+                <h4>{label}</h4>
+                <p>{desc}</p>
+            </div>
+        </Link>
     );
 }

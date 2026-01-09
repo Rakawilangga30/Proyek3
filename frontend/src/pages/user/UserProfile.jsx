@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { toast } from "react-hot-toast";
 import api from "../../api";
 
 export default function UserProfile() {
@@ -88,7 +89,7 @@ export default function UserProfile() {
         const selected = e.target.files[0];
         if (selected) {
             if (selected.size > 2 * 1024 * 1024) {
-                alert("Ukuran file maksimal 2MB!");
+                toast.error("Ukuran file maksimal 2MB!");
                 return;
             }
             setFile(selected);
@@ -139,11 +140,11 @@ export default function UserProfile() {
             } catch (e) { }
 
             await loadProfile();
-            alert("✅ Profil berhasil diperbarui!");
+            toast.success("Profil berhasil diperbarui!");
 
         } catch (error) {
             setError("Gagal update profil: " + (error.response?.data?.error || error.message));
-            alert("❌ Gagal update profil");
+            toast.error("Gagal update profil");
         } finally {
             setLoading(false);
         }
@@ -183,7 +184,7 @@ export default function UserProfile() {
                     Kelola informasi profil Anda
                 </p>
             </div>
-          
+
             {error && (
                 <div style={{
                     background: "#fef2f2", border: "1px solid #fecaca",

@@ -82,7 +82,18 @@ func GetEventDetail(c *gin.Context) {
 		return
 	}
 
-	// 2. Ambil Sesi (Hanya yang tidak DRAFT)
+	// 2. Ambil data organisasi
+	var organization struct {
+		ID      int64  `db:"id" json:"id"`
+		Name    string `db:"name" json:"name"`
+		LogoURL string `db:"logo_url" json:"logo_url"`
+	}
+	config.DB.Get(&organization, `
+		SELECT id, name, COALESCE(logo_url, '') as logo_url
+		FROM organizations WHERE id = ?
+	`, event.OrganizationID)
+
+	// 3. Ambil Sesi (Hanya yang tidak DRAFT)
 	var sessions []models.Session
 	err = config.DB.Select(&sessions, `
 		SELECT 
@@ -99,7 +110,8 @@ func GetEventDetail(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"event":    event,
-		"sessions": sessions,
+		"event":        event,
+		"sessions":     sessions,
+		"organization": organization,
 	})
 }

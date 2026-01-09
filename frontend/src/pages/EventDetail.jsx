@@ -6,12 +6,20 @@ import CertificateViewer from "../components/CertificateViewer";
 import SecureVideoPlayer from "../components/SecureVideoPlayer";
 import SecureDocumentViewer from "../components/SecureDocumentViewer";
 import PurchaseButton from "../components/PurchaseButton";
+import {
+    AlertCircle, ArrowLeft, BookOpen, Calculator,
+    Calendar, CheckCircle2, ChevronDown, ChevronUp,
+    Clock, FileText, Lock, PlayCircle, ShieldCheck,
+    Unlock, User
+} from "lucide-react";
+import toast from "react-hot-toast";
 
 export default function EventDetail() {
     const { id } = useParams();
     const navigate = useNavigate();
     const [event, setEvent] = useState(null);
     const [sessions, setSessions] = useState([]);
+    const [organization, setOrganization] = useState(null);
 
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -36,9 +44,18 @@ export default function EventDetail() {
         setError(null);
         try {
             const response = await api.get(`/events/${id}`);
-            setEvent(response.data.event);
+            console.log("Event Data:", response.data); // Debugging
 
-            const initialSessions = response.data.sessions.map(s => ({ ...s, isPurchased: false }));
+            if (!response.data || !response.data.event) {
+                throw new Error("Data event tidak lengkap dari server.");
+            }
+
+            setEvent(response.data.event);
+            setOrganization(response.data.organization || null);
+
+            // Safety check for sessions
+            const sessionData = Array.isArray(response.data.sessions) ? response.data.sessions : [];
+            const initialSessions = sessionData.map(s => ({ ...s, isPurchased: false }));
             setSessions(initialSessions);
 
             const token = localStorage.getItem("token");
@@ -47,11 +64,8 @@ export default function EventDetail() {
             }
         } catch (err) {
             console.error("Gagal ambil detail event", err);
-            if (err.response && err.response.status === 404) {
-                setError("Event tidak ditemukan atau belum dipublikasikan.");
-            } else {
-                setError("Terjadi kesalahan saat memuat event.");
-            }
+            const msg = err.response?.data?.error || err.message || "Terjadi kesalahan saat memuat event.";
+            setError(msg);
         } finally {
             setLoading(false);
         }
@@ -88,17 +102,17 @@ export default function EventDetail() {
     const handleBuy = async (sessionId) => {
         const token = localStorage.getItem("token");
         if (!token) {
-            alert("Anda harus login terlebih dahulu untuk membeli tiket.");
+            toast.error("Silakan login untuk membeli tiket.");
             navigate("/login");
             return;
         }
 
         try {
             await api.post(`/user/buy/${sessionId}`);
-            alert("Pembelian berhasil!");
+            toast.success("Pembelian berhasil! Selamat belajar.");
             fetchEventDetail();
         } catch (error) {
-            alert("Gagal membeli: " + (error.response?.data?.error || "Terjadi kesalahan"));
+            toast.error("Gagal membeli: " + (error.response?.data?.error || "Terjadi kesalahan"));
         }
     };
 
@@ -113,43 +127,38 @@ export default function EventDetail() {
             setSelectedSessionMedia(safeData);
             setActiveVideoUrl(null);
             setExpandedMediaId(null);
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            document.getElementById("learning-area")?.scrollIntoView({ behavior: 'smooth' });
         } catch (error) {
             console.error("Gagal membuka materi:", error);
-            alert("Gagal membuka materi: " + (error.response?.data?.error || "Error"));
+            toast.error("Gagal membuka materi: " + (error.response?.data?.error || "Error"));
         }
     };
 
     const toggleMedia = (id) => {
-        if (expandedMediaId === id) setExpandedMediaId(null);
-        else setExpandedMediaId(id);
+        setExpandedMediaId(expandedMediaId === id ? null : id);
     };
 
     const handlePlayVideo = async (videoUrl) => {
-        if (!videoUrl) return alert("URL video tidak valid!");
+        if (!videoUrl) return toast.error("URL video tidak valid!");
         try {
             const filename = videoUrl.split(/[/\\]/).pop();
             const res = await api.get(`/user/sessions/signed-video/${filename}`);
             const fullUrl = `http://localhost:8080${res.data.url}`;
             setActiveVideoUrl(fullUrl);
-            setTimeout(() => {
-                document.getElementById("video-player-area")?.scrollIntoView({ behavior: "smooth" });
-            }, 100);
         } catch (error) {
-            alert("Gagal memuat video! Pastikan Anda sudah login.");
+            toast.error("Gagal memuat video! Pastikan sesi valid.");
         }
     };
 
     const handleOpenFile = async (fileUrl, fileTitle) => {
-        if (!fileUrl) return alert("URL file tidak valid!");
+        if (!fileUrl) return toast.error("URL file tidak valid!");
         try {
             const filename = fileUrl.split(/[/\\]/).pop();
             const res = await api.get(`/user/sessions/signed-file/${filename}`);
             const fullUrl = `http://localhost:8080${res.data.url}`;
-            // Open in secure document viewer instead of new tab
             setActiveDocument({ url: fullUrl, title: fileTitle || filename });
         } catch (error) {
-            alert("Gagal memuat file!");
+            toast.error("Gagal memuat file!");
         }
     };
 
@@ -157,20 +166,22 @@ export default function EventDetail() {
     if (loading) {
         return (
             <div style={{
-                padding: "60px",
-                textAlign: "center",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                minHeight: "60vh",
                 color: "#64748b"
             }}>
-                <div style={{
-                    width: "40px",
-                    height: "40px",
-                    border: "3px solid #e2e8f0",
+                <div className="animate-spin" style={{
+                    width: "48px",
+                    height: "48px",
+                    border: "4px solid #e2e8f0",
                     borderTopColor: "#3b82f6",
                     borderRadius: "50%",
-                    animation: "spin 1s linear infinite",
-                    margin: "0 auto 16px"
+                    marginBottom: "16px"
                 }}></div>
-                Memuat Event...
+                <p style={{ fontWeight: 500 }}>Memuat detail event...</p>
             </div>
         );
     }
@@ -179,35 +190,31 @@ export default function EventDetail() {
     if (error) {
         return (
             <div style={{
-                padding: "60px",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                minHeight: "60vh",
                 textAlign: "center",
-                maxWidth: "500px",
-                margin: "40px auto"
+                padding: "20px"
             }}>
                 <div style={{
                     width: "80px",
                     height: "80px",
-                    background: "#fef2f2",
+                    background: "#fee2e2",
                     borderRadius: "50%",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    margin: "0 auto 20px",
-                    fontSize: "2rem"
+                    marginBottom: "20px",
+                    color: "#ef4444"
                 }}>
-                    ⚠️
+                    <AlertCircle size={40} />
                 </div>
-                <h2 style={{ color: "#dc2626", marginBottom: "12px" }}>{error}</h2>
-                <Link to="/" style={{
-                    display: "inline-block",
-                    padding: "12px 24px",
-                    background: "linear-gradient(135deg, #3b82f6, #2563eb)",
-                    color: "white",
-                    textDecoration: "none",
-                    borderRadius: "8px",
-                    fontWeight: "600"
-                }}>
-                    ← Kembali ke Home
+                <h2 style={{ fontSize: "1.5rem", color: "#1e293b", marginBottom: "8px" }}>Gagal Memuat Event</h2>
+                <p style={{ color: "#64748b", marginBottom: "24px", maxWidth: "400px" }}>{error}</p>
+                <Link to="/" className="btn btn-primary">
+                    <ArrowLeft size={18} /> Kembali ke Beranda
                 </Link>
             </div>
         );
@@ -217,223 +224,421 @@ export default function EventDetail() {
 
     return (
         <div style={{
-            padding: "24px",
-            maxWidth: "1200px",
+            padding: "32px 24px",
+            maxWidth: "1280px",
             margin: "0 auto",
             minHeight: "100vh"
         }}>
-
-            {/* Event Header */}
-            <div style={{
-                background: "linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #60a5fa 100%)",
-                padding: "32px",
-                borderRadius: "16px",
-                color: "white",
-                marginBottom: "32px",
-                position: "relative",
-                overflow: "hidden"
+            {/* Breadcrumb / Back */}
+            <Link to="/" style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "8px",
+                color: "#64748b",
+                marginBottom: "24px",
+                fontSize: "0.9rem"
             }}>
-                <div style={{
-                    position: "absolute",
-                    top: "-50%",
-                    right: "-5%",
-                    width: "200px",
-                    height: "200px",
-                    background: "rgba(255,255,255,0.1)",
-                    borderRadius: "50%"
-                }}></div>
+                <ArrowLeft size={16} /> Kembali ke Daftar Event
+            </Link>
 
-                <div style={{ position: "relative", zIndex: 1 }}>
-                    <h1 style={{ margin: "0 0 12px 0", fontSize: "1.75rem" }}>{event.title}</h1>
-                    <p style={{ margin: "0 0 16px 0", opacity: 0.9, maxWidth: "700px" }}>
-                        {event.description}
-                    </p>
-                    <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-                        <span style={{
-                            background: "rgba(255,255,255,0.2)",
-                            padding: "6px 16px",
-                            borderRadius: "20px",
-                            fontSize: "0.9rem",
-                            fontWeight: "500"
-                        }}>
-                            {event.category}
+            {/* Hero Section */}
+            <div style={{
+                background: "white",
+                borderRadius: "24px",
+                padding: "40px",
+                boxShadow: "0 4px 6px -1px rgba(0,0,0,0.05)",
+                border: "1px solid #e2e8f0",
+                marginBottom: "32px",
+                display: "grid",
+                gridTemplateColumns: "1fr auto",
+                gap: "40px",
+                alignItems: "center"
+            }}>
+                <div>
+                    <div style={{
+                        display: "flex",
+                        gap: "10px",
+                        marginBottom: "16px"
+                    }}>
+                        <span className="badge badge-primary">
+                            {event.category || "Webinar"}
                         </span>
                         {event.publish_status === 'SCHEDULED' && (
-                            <span style={{
-                                background: "#fbbf24",
-                                color: "#78350f",
-                                padding: "6px 16px",
-                                borderRadius: "20px",
-                                fontSize: "0.9rem",
-                                fontWeight: "600"
-                            }}>
-                                📅 Upcoming - Tayang: {new Date(event.publish_at).toLocaleDateString()}
+                            <span className="badge badge-warning">
+                                <Calendar size={12} style={{ marginRight: 4 }} />
+                                Tayang: {new Date(event.publish_at).toLocaleDateString()}
                             </span>
                         )}
                     </div>
+
+                    <h1 style={{
+                        fontSize: "2.5rem",
+                        fontWeight: "800",
+                        color: "#1e293b",
+                        marginBottom: "16px",
+                        lineHeight: "1.2"
+                    }}>
+                        {event.title}
+                    </h1>
+
+                    <p style={{
+                        fontSize: "1.1rem",
+                        color: "#475569",
+                        lineHeight: "1.6",
+                        maxWidth: "800px"
+                    }}>
+                        {event.description}
+                    </p>
+
+                    <div style={{ marginTop: "24px", display: "flex", gap: "24px", color: "#64748b", fontSize: "0.95rem", flexWrap: "wrap" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                            <User size={18} /> {event.instructor_name || "Instruktur Ahli"}
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                            <BookOpen size={18} /> {sessions.length} Sesi Materi
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                            <ShieldCheck size={18} /> Sertifikat Kompetensi
+                        </div>
+                    </div>
+
+                    {/* Organization Info - YouTube Style */}
+                    {organization && organization.id > 0 && (
+                        <Link
+                            to={`/organization/${organization.id}`}
+                            style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "10px",
+                                marginTop: "20px",
+                                textDecoration: "none",
+                                padding: "6px 12px 6px 6px",
+                                borderRadius: "24px",
+                                background: "#f8fafc",
+                                border: "1px solid #e2e8f0",
+                                transition: "all 0.2s ease"
+                            }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.background = "#f1f5f9";
+                                e.currentTarget.style.borderColor = "#cbd5e1";
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.background = "#f8fafc";
+                                e.currentTarget.style.borderColor = "#e2e8f0";
+                            }}
+                        >
+                            <img
+                                src={organization.logo_url
+                                    ? `http://localhost:8080/${organization.logo_url}`
+                                    : "https://ui-avatars.com/api/?name=" + encodeURIComponent(organization.name) + "&background=3b82f6&color=fff&size=40"
+                                }
+                                alt={organization.name}
+                                style={{
+                                    width: "32px",
+                                    height: "32px",
+                                    borderRadius: "50%",
+                                    objectFit: "cover"
+                                }}
+                            />
+                            <span style={{
+                                fontSize: "0.9rem",
+                                fontWeight: "500",
+                                color: "#1e293b"
+                            }}>
+                                {organization.name}
+                            </span>
+                        </Link>
+                    )}
                 </div>
             </div>
 
-            {/* Progress & Certificate Summary */}
+            {/* Progress Section (Logged In) */}
             {localStorage.getItem("token") && quizProgress?.has_quizzes && (
                 <div style={{
-                    padding: '20px',
-                    background: 'linear-gradient(135deg, #1e40af 0%, #3b82f6 100%)',
-                    borderRadius: '12px',
-                    color: 'white',
-                    marginBottom: '24px'
+                    padding: '24px',
+                    background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
+                    border: '1px solid #bfdbfe',
+                    borderRadius: '16px',
+                    marginBottom: '32px',
+                    color: '#1e40af'
                 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                        <div>
-                            <h3 style={{ margin: '0 0 4px 0' }}>📊 Progress Sertifikat</h3>
-                            <p style={{ margin: 0, opacity: 0.8, fontSize: '0.9rem' }}>
-                                Selesaikan semua kuis untuk mendapatkan sertifikat
-                            </p>
+                        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                            <div style={{ background: "white", padding: "10px", borderRadius: "10px" }}>
+                                <Calculator size={24} color="#2563eb" />
+                            </div>
+                            <div>
+                                <h3 style={{ margin: 0, fontSize: "1.1rem" }}>Progress Sertifikat</h3>
+                                <p style={{ margin: 0, opacity: 0.8, fontSize: '0.9rem' }}>
+                                    Minimal skor {quizProgress.min_score_required || 80}% untuk lulus
+                                </p>
+                            </div>
                         </div>
-                        {quizProgress.total_percent >= (quizProgress.min_score_required || 80) && (
+                        {quizProgress.total_percent >= (quizProgress.min_score_required || 80) ? (
                             <button
                                 onClick={() => setShowCertificate(true)}
-                                style={{
-                                    padding: '10px 20px',
-                                    background: '#10b981',
-                                    color: 'white',
-                                    border: 'none',
-                                    borderRadius: '8px',
-                                    cursor: 'pointer',
-                                    fontWeight: '600'
-                                }}
+                                className="btn btn-primary"
+                                style={{ background: "#10b981", boxShadow: "0 4px 12px rgba(16, 185, 129, 0.3)" }}
                             >
-                                🎓 Lihat Sertifikat
+                                🎓 Klaim Sertifikat
                             </button>
-                        )}
-                    </div>
-
-                    {/* Progress Bar */}
-                    <div style={{ marginBottom: '16px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '0.9rem' }}>
-                            <span>Skor Total</span>
-                            <span style={{ fontWeight: 'bold' }}>{(quizProgress.total_percent || 0).toFixed(1)}%</span>
-                        </div>
-                        <div style={{ height: '12px', background: 'rgba(255,255,255,0.2)', borderRadius: '6px', overflow: 'hidden' }}>
-                            <div style={{
-                                width: `${Math.min(100, quizProgress.total_percent || 0)}%`,
-                                height: '100%',
-                                background: quizProgress.total_percent >= (quizProgress.min_score_required || 80) ? '#10b981' : quizProgress.total_percent > 50 ? '#f59e0b' : '#ef4444',
-                                transition: 'width 0.5s, background 0.3s'
-                            }} />
-                        </div>
-                        <div style={{ fontSize: '0.8rem', opacity: 0.8, marginTop: '4px' }}>
-                            Minimal {quizProgress.min_score_required || 80}% untuk mendapatkan sertifikat
-                        </div>
-                    </div>
-
-                    {/* Status Message */}
-                    <div style={{
-                        padding: '12px',
-                        background: quizProgress.total_percent >= (quizProgress.min_score_required || 80) ? 'rgba(16,185,129,0.2)' : 'rgba(255,255,255,0.1)',
-                        borderRadius: '8px',
-                        textAlign: 'center'
-                    }}>
-                        {quizProgress.total_percent >= (quizProgress.min_score_required || 80) ? (
-                            <span>🎉 Selamat! Anda telah lulus dan mendapatkan sertifikat!</span>
-                        ) : quizProgress.progress?.every(p => p.completed) ? (
-                            <span>📚 Skor Anda belum mencukupi. Coba kuis lagi untuk meningkatkan skor.</span>
                         ) : (
-                            <span>📝 Selesaikan semua kuis untuk melihat skor total Anda.</span>
+                            <div style={{ fontWeight: "700", fontSize: "1.25rem" }}>
+                                {(quizProgress.total_percent || 0).toFixed(0)}%
+                            </div>
                         )}
+                    </div>
+                    <div style={{
+                        height: '8px',
+                        background: 'rgba(255,255,255,0.6)',
+                        borderRadius: '4px',
+                        overflow: 'hidden',
+                        border: "1px solid rgba(255,255,255,0.8)"
+                    }}>
+                        <div style={{
+                            width: `${Math.min(100, quizProgress.total_percent || 0)}%`,
+                            height: '100%',
+                            background: quizProgress.total_percent >= (quizProgress.min_score_required || 80) ? '#10b981' : '#3b82f6',
+                            transition: 'width 0.5s ease',
+                            borderRadius: "4px"
+                        }} />
                     </div>
                 </div>
             )}
 
-            {/* Main Content */}
+            {/* Main Content Grid */}
             <div style={{
                 display: "grid",
-                gridTemplateColumns: "350px 1fr",
-                gap: "24px",
+                gridTemplateColumns: "1fr 400px",
+                gap: "32px",
                 alignItems: "start"
             }}>
-
-                {/* Left: Session List */}
+                {/* Left Column: Learning Area & Sessions */}
                 <div>
-                    <h3 style={{
-                        margin: "0 0 16px 0",
-                        color: "#1e293b",
-                        fontSize: "1.1rem",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "8px"
-                    }}>
+                    {/* Learning Area */}
+                    <div id="learning-area" style={{ marginBottom: "32px" }}>
+                        <h3 style={{ margin: "0 0 16px 0", fontSize: "1.25rem", color: "#1e293b" }}>
+                            📺 Area Belajar
+                        </h3>
+                        <div style={{
+                            background: "white",
+                            border: "1px solid #e2e8f0",
+                            borderRadius: "16px",
+                            padding: "24px",
+                            minHeight: "300px",
+                            boxShadow: "0 4px 6px -1px rgba(0,0,0,0.02)"
+                        }}>
+                            {!selectedSessionMedia ? (
+                                <div style={{
+                                    textAlign: "center",
+                                    padding: "40px",
+                                    color: "#94a3b8",
+                                    display: "flex",
+                                    flexDirection: "column",
+                                    alignItems: "center",
+                                    gap: "16px"
+                                }}>
+                                    <div style={{
+                                        width: "64px", height: "64px",
+                                        borderRadius: "50%", background: "#f1f5f9",
+                                        display: "flex", alignItems: "center", justifyContent: "center"
+                                    }}>
+                                        <PlayCircle size={32} />
+                                    </div>
+                                    <p>Pilih sesi di sebelah kanan untuk mulai belajar.</p>
+                                </div>
+                            ) : (
+                                <div>
+                                    {/* Videos */}
+                                    {selectedSessionMedia?.videos?.length > 0 && (
+                                        <div style={{ marginBottom: "24px" }}>
+                                            <h4 style={{ fontSize: "1rem", marginBottom: "12px", display: "flex", alignItems: "center", gap: "8px" }}>
+                                                <PlayCircle size={18} className="text-primary" /> Video Materi
+                                            </h4>
+                                            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                                                {selectedSessionMedia.videos.map((vid) => (
+                                                    <div key={vid.id} style={{
+                                                        border: "1px solid #e2e8f0",
+                                                        borderRadius: "10px",
+                                                        overflow: "hidden"
+                                                    }}>
+                                                        <div
+                                                            onClick={() => toggleMedia(vid.id)}
+                                                            style={{
+                                                                padding: "12px 16px",
+                                                                cursor: "pointer",
+                                                                background: "#f8fafc",
+                                                                display: "flex",
+                                                                justifyContent: "space-between",
+                                                                alignItems: "center",
+                                                                fontWeight: "500"
+                                                            }}
+                                                        >
+                                                            <span>{vid.title || "Video Pembelajaran"}</span>
+                                                            {expandedMediaId === vid.id ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                                                        </div>
+                                                        {expandedMediaId === vid.id && (
+                                                            <div style={{ padding: "16px", background: "white", borderTop: "1px solid #e2e8f0" }}>
+                                                                <p style={{ fontSize: "0.9rem", color: "#64748b", marginBottom: "12px" }}>
+                                                                    {vid.description}
+                                                                </p>
+                                                                <button
+                                                                    onClick={() => handlePlayVideo(vid.video_url)}
+                                                                    className="btn btn-primary"
+                                                                    style={{ fontSize: "0.85rem", padding: "8px 16px" }}
+                                                                >
+                                                                    <PlayCircle size={16} /> Putar Video
+                                                                </button>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Files */}
+                                    {selectedSessionMedia?.files?.length > 0 && (
+                                        <div>
+                                            <h4 style={{ fontSize: "1rem", marginBottom: "12px", display: "flex", alignItems: "center", gap: "8px" }}>
+                                                <FileText size={18} className="text-warning" /> Modul Dokumen
+                                            </h4>
+                                            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                                                {selectedSessionMedia.files.map((f) => (
+                                                    <div key={f.id} style={{
+                                                        border: "1px solid #e2e8f0",
+                                                        borderRadius: "10px",
+                                                        overflow: "hidden"
+                                                    }}>
+                                                        <div
+                                                            onClick={() => toggleMedia("file-" + f.id)}
+                                                            style={{
+                                                                padding: "12px 16px",
+                                                                cursor: "pointer",
+                                                                background: "#fffbeb",
+                                                                display: "flex",
+                                                                justifyContent: "space-between",
+                                                                alignItems: "center",
+                                                                fontWeight: "500",
+                                                                color: "#92400e"
+                                                            }}
+                                                        >
+                                                            <span>{f.title || "Dokumen Materi"}</span>
+                                                            {expandedMediaId === ("file-" + f.id) ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                                                        </div>
+                                                        {expandedMediaId === ("file-" + f.id) && (
+                                                            <div style={{ padding: "16px", background: "white", borderTop: "1px solid #fef3c7" }}>
+                                                                <button
+                                                                    onClick={() => handleOpenFile(f.file_url, f.title)}
+                                                                    className="btn"
+                                                                    style={{
+                                                                        fontSize: "0.85rem",
+                                                                        padding: "8px 16px",
+                                                                        background: "#f59e0b",
+                                                                        color: "white"
+                                                                    }}
+                                                                >
+                                                                    <FileText size={16} /> Buka Dokumen
+                                                                </button>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Right Column: Session List */}
+                <div style={{ position: "sticky", top: "20px" }}>
+                    <h3 style={{ margin: "0 0 16px 0", fontSize: "1.25rem", color: "#1e293b" }}>
                         📑 Daftar Sesi
                     </h3>
-
-                    <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                        {sessions.map((s) => (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                        {sessions.map((s, index) => (
                             <div key={s.id} style={{
-                                background: s.isPurchased ? "#f0fdf4" : "white",
-                                border: s.isPurchased ? "2px solid #86efac" : "1px solid #e2e8f0",
+                                background: "white",
+                                border: s.isPurchased ? "2px solid #22c55e" : "1px solid #e2e8f0",
+                                borderRadius: "16px",
                                 padding: "20px",
-                                borderRadius: "12px",
-                                boxShadow: "0 2px 4px rgba(0,0,0,0.05)"
+                                transition: "all 0.2s ease",
+                                boxShadow: s.isPurchased ? "0 4px 12px rgba(34, 197, 94, 0.1)" : "0 2px 4px rgba(0,0,0,0.05)"
                             }}>
-                                <h4 style={{ margin: "0 0 8px 0", color: "#1e293b", fontSize: "1rem" }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
+                                    <span style={{
+                                        fontWeight: "700",
+                                        color: "#94a3b8",
+                                        fontSize: "0.8rem",
+                                        textTransform: "uppercase",
+                                        letterSpacing: "1px"
+                                    }}>
+                                        Sesi {index + 1}
+                                    </span>
+                                    {s.isPurchased ?
+                                        <CheckCircle2 size={18} color="#22c55e" /> :
+                                        <Lock size={18} color="#94a3b8" />
+                                    }
+                                </div>
+
+                                <h4 style={{ margin: "0 0 8px 0", fontSize: "1.1rem", color: "#1e293b" }}>
                                     {s.title}
                                 </h4>
-                                <p style={{ margin: "0 0 16px 0", color: "#64748b", fontSize: "0.9rem" }}>
-                                    Harga: <strong style={{ color: "#1e293b" }}>Rp {s.price?.toLocaleString()}</strong>
-                                </p>
+
+                                <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "#64748b", fontSize: "0.9rem", marginBottom: "16px" }}>
+                                    <Clock size={14} /> {s.duration || "60 Menit"}
+                                    {s.price > 0 && (
+                                        <span style={{ marginLeft: "auto", fontWeight: "700", color: "#0f172a" }}>
+                                            Rp {s.price.toLocaleString()}
+                                        </span>
+                                    )}
+                                </div>
 
                                 {s.isPurchased ? (
-                                    <button
-                                        onClick={() => handleOpenMaterial(s.id)}
-                                        style={{
-                                            width: "100%",
-                                            background: "linear-gradient(135deg, #22c55e, #16a34a)",
-                                            color: "white",
-                                            padding: "12px",
-                                            border: "none",
-                                            borderRadius: "8px",
-                                            cursor: "pointer",
-                                            fontWeight: "600",
-                                            fontSize: "0.9rem"
-                                        }}
-                                    >
-                                        📂 Buka Materi
-                                    </button>
+                                    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                                        <button
+                                            onClick={() => handleOpenMaterial(s.id)}
+                                            className="btn btn-primary btn-full"
+                                            style={{ background: "#22c55e", border: "none" }}
+                                        >
+                                            <Unlock size={16} /> Buka Materi
+                                        </button>
+
+                                        {/* Quiz Button */}
+                                        {localStorage.getItem("token") && (() => {
+                                            const sessionQuiz = getSessionQuiz(s.id);
+                                            if (!sessionQuiz) return null;
+                                            return (
+                                                <button
+                                                    onClick={() => setQuizSessionId(s.id)}
+                                                    className="btn btn-secondary btn-full"
+                                                    style={{
+                                                        fontSize: "0.85rem",
+                                                        background: sessionQuiz.completed ? "#f0fdf4" : "white",
+                                                        borderColor: sessionQuiz.completed ? "#86efac" : "#e2e8f0"
+                                                    }}
+                                                >
+                                                    {sessionQuiz.completed ? (
+                                                        <span style={{ color: "#16a34a" }}>✅ Kuis Selesai ({sessionQuiz.score}%)</span>
+                                                    ) : "📝 Kerjakan Kuis"}
+                                                </button>
+                                            );
+                                        })()}
+                                    </div>
                                 ) : (
                                     event.publish_status === 'SCHEDULED' ? (
-                                        <button
-                                            disabled
-                                            style={{
-                                                width: "100%",
-                                                background: "#e2e8f0",
-                                                color: "#94a3b8",
-                                                padding: "12px",
-                                                border: "none",
-                                                borderRadius: "8px",
-                                                cursor: "not-allowed",
-                                                fontWeight: "600",
-                                                fontSize: "0.9rem"
-                                            }}
-                                        >
-                                            🔒 Belum Dibuka
+                                        <button className="btn btn-secondary btn-full" disabled>
+                                            🔒 Belum Tersedia
                                         </button>
                                     ) : s.price === 0 || s.price === null ? (
-                                        /* FREE session - direct enrollment without payment */
                                         <button
                                             onClick={() => handleBuy(s.id)}
-                                            style={{
-                                                width: "100%",
-                                                background: "linear-gradient(135deg, #10b981, #059669)",
-                                                color: "white",
-                                                padding: "12px",
-                                                border: "none",
-                                                borderRadius: "8px",
-                                                cursor: "pointer",
-                                                fontWeight: "600",
-                                                fontSize: "0.9rem"
-                                            }}
+                                            className="btn btn-primary btn-full"
                                         >
-                                            🎁 GRATIS - Daftar Sekarang
+                                            Gratis - Daftar
                                         </button>
                                     ) : (
                                         <PurchaseButton
@@ -441,233 +646,139 @@ export default function EventDetail() {
                                             sessionName={s.title}
                                             price={s.price}
                                             onSuccess={() => fetchEventDetail()}
-                                            className="full-width"
+                                            className="btn btn-primary btn-full"
                                         />
                                     )
                                 )}
-
-                                {/* Quiz Button - Show in session if purchased and has quiz */}
-                                {s.isPurchased && localStorage.getItem("token") && (() => {
-                                    const sessionQuiz = getSessionQuiz(s.id);
-                                    if (!sessionQuiz) return null;
-                                    return (
-                                        <div style={{
-                                            marginTop: '12px',
-                                            padding: '12px',
-                                            background: sessionQuiz.completed ? '#f0fdf4' : '#eff6ff',
-                                            border: sessionQuiz.completed ? '1px solid #86efac' : '1px solid #93c5fd',
-                                            borderRadius: '8px'
-                                        }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                <div>
-                                                    <div style={{ fontWeight: '500', fontSize: '0.9rem', color: '#1e293b' }}>
-                                                        📝 Kuis Sesi
-                                                    </div>
-                                                    <div style={{ fontSize: '0.8rem', color: '#64748b' }}>
-                                                        Bobot: {sessionQuiz.weight?.toFixed(1)}%
-                                                    </div>
-                                                </div>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                    {sessionQuiz.completed && (
-                                                        <span style={{
-                                                            padding: '4px 10px',
-                                                            borderRadius: '16px',
-                                                            background: sessionQuiz.passed ? '#10b981' : '#f59e0b',
-                                                            color: 'white',
-                                                            fontSize: '0.8rem',
-                                                            fontWeight: '500'
-                                                        }}>
-                                                            {sessionQuiz.score?.toFixed(0)}%
-                                                        </span>
-                                                    )}
-                                                    <button
-                                                        onClick={() => setQuizSessionId(s.id)}
-                                                        style={{
-                                                            padding: '6px 14px',
-                                                            background: sessionQuiz.completed
-                                                                ? 'linear-gradient(135deg, #6366f1, #4f46e5)'
-                                                                : 'linear-gradient(135deg, #3b82f6, #2563eb)',
-                                                            color: 'white',
-                                                            border: 'none',
-                                                            borderRadius: '6px',
-                                                            cursor: 'pointer',
-                                                            fontWeight: '500',
-                                                            fontSize: '0.8rem'
-                                                        }}
-                                                    >
-                                                        {sessionQuiz.completed ? '🔄 Ulang Kuis' : '📝 Mulai Kuis'}
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    );
-                                })()}
                             </div>
                         ))}
                     </div>
                 </div>
-
-                {/* Right: Learning Area */}
-                <div style={{
-                    background: "white",
-                    border: "1px solid #e2e8f0",
-                    padding: "24px",
-                    borderRadius: "12px",
-                    minHeight: "500px",
-                    boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)"
-                }}>
-                    <h3 style={{
-                        margin: "0 0 20px 0",
-                        paddingBottom: "12px",
-                        borderBottom: "2px solid #e2e8f0",
-                        color: "#1e293b",
-                        fontSize: "1.1rem"
-                    }}>
-                        📖 Area Belajar
-                    </h3>
-
-                    {!selectedSessionMedia ? (
-                        <div style={{
-                            textAlign: "center",
-                            padding: "60px 20px",
-                            color: "#64748b"
-                        }}>
-                            <div style={{ fontSize: "3rem", marginBottom: "16px" }}>👈</div>
-                            <p style={{ margin: 0 }}>
-                                Silakan klik tombol <strong>"Buka Materi"</strong> pada sesi di sebelah kiri.
-                            </p>
-                        </div>
-                    ) : (
-                        <div>
-                            {/* Video Player */}
-                            {activeVideoUrl && (
-                                <div id="video-player-area" style={{
-                                    marginBottom: "24px",
-                                    background: "#000",
-                                    borderRadius: "12px",
-                                    overflow: "hidden"
-                                }}>
-                                    <SecureVideoPlayer src={activeVideoUrl} autoPlay={true} />
-                                </div>
-                            )}
-
-                            {/* Video List */}
-                            <h4 style={{ margin: "0 0 12px 0", color: "#1d4ed8", display: "flex", alignItems: "center", gap: "8px" }}>
-                                📺 Video Pembelajaran
-                            </h4>
-                            {(selectedSessionMedia?.videos?.length || 0) === 0 ? (
-                                <p style={{ color: "#94a3b8", fontStyle: "italic", marginBottom: "24px" }}>Tidak ada video.</p>
-                            ) : (
-                                <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginBottom: "24px" }}>
-                                    {selectedSessionMedia?.videos?.map((vid) => (
-                                        <div key={vid.id} style={{
-                                            border: "1px solid #e2e8f0",
-                                            borderRadius: "8px",
-                                            overflow: "hidden"
-                                        }}>
-                                            <div
-                                                onClick={() => toggleMedia(vid.id)}
-                                                style={{
-                                                    padding: "12px 16px",
-                                                    cursor: "pointer",
-                                                    fontWeight: "500",
-                                                    background: "#f8fafc",
-                                                    display: "flex",
-                                                    justifyContent: "space-between",
-                                                    alignItems: "center"
-                                                }}
-                                            >
-                                                <span>🎥 {vid.title || vid.video_url || 'Untitled video'}</span>
-                                                <span>{expandedMediaId === vid.id ? "🔼" : "🔽"}</span>
-                                            </div>
-                                            {expandedMediaId === vid.id && (
-                                                <div style={{ padding: "16px", borderTop: "1px solid #e2e8f0", background: "white" }}>
-                                                    <p style={{ margin: "0 0 12px 0", color: "#64748b", fontSize: "0.9rem" }}>
-                                                        {vid.description || 'Tidak ada deskripsi.'}
-                                                    </p>
-                                                    <button
-                                                        onClick={() => handlePlayVideo(vid.video_url)}
-                                                        style={{
-                                                            background: "linear-gradient(135deg, #ef4444, #dc2626)",
-                                                            color: "white",
-                                                            border: "none",
-                                                            padding: "8px 16px",
-                                                            borderRadius: "6px",
-                                                            cursor: "pointer",
-                                                            fontWeight: "600",
-                                                            fontSize: "0.85rem"
-                                                        }}
-                                                    >
-                                                        ▶️ Putar Video
-                                                    </button>
-                                                </div>
-                                            )}
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-
-                            {/* File List */}
-                            <h4 style={{ margin: "0 0 12px 0", color: "#ea580c", display: "flex", alignItems: "center", gap: "8px" }}>
-                                📄 Modul Dokumen
-                            </h4>
-                            {(selectedSessionMedia?.files?.length || 0) === 0 ? (
-                                <p style={{ color: "#94a3b8", fontStyle: "italic" }}>Tidak ada file.</p>
-                            ) : (
-                                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                                    {selectedSessionMedia?.files?.map((f) => (
-                                        <div key={f.id} style={{
-                                            border: "1px solid #e2e8f0",
-                                            borderRadius: "8px",
-                                            overflow: "hidden"
-                                        }}>
-                                            <div
-                                                onClick={() => toggleMedia("file-" + f.id)}
-                                                style={{
-                                                    padding: "12px 16px",
-                                                    cursor: "pointer",
-                                                    fontWeight: "500",
-                                                    background: "#fffbeb",
-                                                    display: "flex",
-                                                    justifyContent: "space-between",
-                                                    alignItems: "center"
-                                                }}
-                                            >
-                                                <span>📑 {f.title || f.file_url || 'Untitled file'}</span>
-                                                <span>{(expandedMediaId === ("file-" + f.id)) ? "🔼" : "🔽"}</span>
-                                            </div>
-                                            {(expandedMediaId === ("file-" + f.id)) && (
-                                                <div style={{ padding: "16px", borderTop: "1px solid #e2e8f0", background: "white" }}>
-                                                    <p style={{ margin: "0 0 12px 0", color: "#64748b", fontSize: "0.9rem" }}>
-                                                        {f.description || 'Tidak ada deskripsi.'}
-                                                    </p>
-                                                    <button
-                                                        onClick={() => handleOpenFile(f.file_url, f.title)}
-                                                        style={{
-                                                            background: "linear-gradient(135deg, #f59e0b, #d97706)",
-                                                            color: "white",
-                                                            border: "none",
-                                                            padding: "8px 16px",
-                                                            borderRadius: "6px",
-                                                            cursor: "pointer",
-                                                            fontWeight: "600",
-                                                            fontSize: "0.85rem"
-                                                        }}
-                                                    >
-                                                        📄 Buka File
-                                                    </button>
-                                                </div>
-                                            )}
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    )}
-                </div>
             </div>
 
-            {/* Quiz Taker Modal */}
+            {/* Modals */}
+            {/* Video Player Modal - Same style as SecureDocumentViewer */}
+            {activeVideoUrl && (
+                <div
+                    className="animate-fade-in"
+                    style={{
+                        position: "fixed",
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        backgroundColor: "rgba(15, 23, 42, 0.95)",
+                        backdropFilter: "blur(10px)",
+                        zIndex: 9999,
+                        display: "flex",
+                        flexDirection: "column"
+                    }}
+                >
+                    {/* Header */}
+                    <div style={{
+                        width: "100%",
+                        padding: "16px 24px",
+                        background: "rgba(255, 255, 255, 0.05)",
+                        borderBottom: "1px solid rgba(255,255,255,0.1)",
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        boxSizing: "border-box"
+                    }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                            <span style={{ fontSize: "1.5rem" }}>🎬</span>
+                            <div>
+                                <h3 style={{ margin: 0, color: "white", fontSize: "1.1rem", fontWeight: "600", letterSpacing: "-0.025em" }}>
+                                    Video Pembelajaran
+                                </h3>
+                                <span style={{
+                                    fontSize: "0.75rem",
+                                    color: "rgba(255,255,255,0.6)",
+                                    textTransform: "uppercase",
+                                    letterSpacing: "0.05em"
+                                }}>
+                                    MP4 &bull; Secure Streaming
+                                </span>
+                            </div>
+                        </div>
+                        <button
+                            onClick={() => setActiveVideoUrl(null)}
+                            className="btn"
+                            style={{
+                                background: "rgba(255,255,255,0.1)",
+                                border: "1px solid rgba(255,255,255,0.2)",
+                                color: "white",
+                                padding: "8px 16px",
+                                borderRadius: "8px",
+                                cursor: "pointer",
+                                fontWeight: "600",
+                                fontSize: "0.9rem",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "8px",
+                                transition: "all 0.2s ease"
+                            }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.background = "rgba(255,255,255,0.2)";
+                                e.currentTarget.style.transform = "translateY(-1px)";
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.background = "rgba(255,255,255,0.1)";
+                                e.currentTarget.style.transform = "translateY(0)";
+                            }}
+                        >
+                            ✕ Tutup
+                        </button>
+                    </div>
+
+                    {/* Video Container */}
+                    <div style={{
+                        flex: 1,
+                        width: "100%",
+                        maxWidth: "1000px",
+                        margin: "0 auto",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        padding: "20px",
+                        boxSizing: "border-box"
+                    }}>
+                        <div style={{
+                            width: "100%",
+                            background: "#000",
+                            borderRadius: "12px",
+                            overflow: "hidden",
+                            boxShadow: "0 0 100px rgba(0,0,0,0.5)"
+                        }}>
+                            <SecureVideoPlayer src={activeVideoUrl} autoPlay={true} />
+                        </div>
+                    </div>
+
+                    {/* Footer - Security Notice */}
+                    <div style={{
+                        padding: "12px 24px",
+                        background: "rgba(0, 0, 0, 0.4)",
+                        borderTop: "1px solid rgba(255,255,255,0.05)",
+                        width: "100%",
+                        textAlign: "center",
+                        boxSizing: "border-box",
+                        backdropFilter: "blur(5px)"
+                    }}>
+                        <p style={{
+                            margin: 0,
+                            color: "#94a3b8",
+                            fontSize: "0.85rem",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: "8px"
+                        }}>
+                            🔒 Video ini dilindungi dengan standar keamanan tinggi.
+                        </p>
+                    </div>
+                </div>
+            )}
+
             {quizSessionId && (
                 <QuizTaker
                     sessionId={quizSessionId}
@@ -675,16 +786,12 @@ export default function EventDetail() {
                     onComplete={() => { setQuizSessionId(null); fetchQuizProgress(); }}
                 />
             )}
-
-            {/* Certificate Viewer Modal */}
             {showCertificate && (
                 <CertificateViewer
                     eventId={id}
                     onClose={() => setShowCertificate(false)}
                 />
             )}
-
-            {/* Secure Document Viewer Modal */}
             {activeDocument && (
                 <SecureDocumentViewer
                     src={activeDocument.url}

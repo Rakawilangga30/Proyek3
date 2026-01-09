@@ -17,6 +17,9 @@ func RegisterRoutes(r *gin.Engine) {
 	{
 		api.POST("/register", controllers.Register)
 		api.POST("/login", controllers.Login)
+		api.POST("/forgot-password", controllers.ForgotPassword)
+		api.POST("/verify-code", controllers.VerifyResetCode)
+		api.POST("/reset-password", controllers.ResetPassword)
 		api.GET("/events", controllers.ListPublicEvents)
 		api.GET("/events/:eventID", controllers.GetEventDetail)
 

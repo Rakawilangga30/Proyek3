@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { User, Mail, Lock, ArrowRight, Loader2, UserPlus } from "lucide-react";
+import toast from 'react-hot-toast';
 import api from "../api";
 
 export default function Register() {
@@ -16,10 +18,13 @@ export default function Register() {
 
         try {
             await api.post("/register", { name, email, password, role });
-            alert("Registrasi Berhasil! Silakan Login.");
-            navigate("/login");
+            toast.success("Registrasi Berhasil! Silakan Login.");
+            setTimeout(() => {
+                navigate("/login");
+            }, 1500);
         } catch (error) {
-            alert("Registrasi Gagal: " + (error.response?.data?.error || "Error"));
+            console.error(error);
+            toast.error("Registrasi Gagal: " + (error.response?.data?.error || "Terjadi kesalahan"));
         } finally {
             setLoading(false);
         }
@@ -31,199 +36,135 @@ export default function Register() {
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            background: "linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)",
+            background: "linear-gradient(135deg, var(--primary-50) 0%, var(--primary-100) 100%)",
             padding: "20px"
         }}>
-            <div style={{
+            <div className="animate-scale-in" style={{
                 width: "100%",
                 maxWidth: "420px",
                 padding: "40px",
-                background: "white",
-                borderRadius: "16px",
-                boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)"
+                background: "rgba(255, 255, 255, 0.9)",
+                backdropFilter: "blur(10px)",
+                borderRadius: "24px",
+                boxShadow: "0 20px 40px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+                border: "1px solid rgba(255, 255, 255, 0.5)"
             }}>
                 {/* Header */}
                 <div style={{ textAlign: "center", marginBottom: "32px" }}>
                     <div style={{
                         width: "64px",
                         height: "64px",
-                        background: "linear-gradient(135deg, #22c55e, #16a34a)",
+                        background: "linear-gradient(135deg, var(--success-500), #059669)",
                         borderRadius: "16px",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
                         margin: "0 auto 16px",
-                        fontSize: "28px"
+                        color: "white",
+                        boxShadow: "0 10px 15px -3px rgba(16, 185, 129, 0.3)"
                     }}>
-                        📝
+                        <UserPlus size={32} />
                     </div>
                     <h2 style={{
                         margin: "0 0 8px 0",
-                        color: "#1e293b",
-                        fontSize: "1.5rem",
-                        fontWeight: "700"
+                        color: "var(--gray-900)",
+                        fontSize: "1.75rem",
+                        fontWeight: "700",
+                        letterSpacing: "-0.025em"
                     }}>
-                        Daftar Akun
+                        Buat Akun Baru
                     </h2>
                     <p style={{
-                        color: "#64748b",
+                        color: "var(--gray-500)",
                         margin: 0,
-                        fontSize: "0.9rem"
+                        fontSize: "0.95rem"
                     }}>
-                        Buat akun baru untuk mulai belajar
+                        Bergabunglah dan mulai belajar hari ini!
                     </p>
                 </div>
 
                 {/* Form */}
                 <form onSubmit={handleRegister} style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
                     <div>
-                        <label style={{
-                            display: "block",
-                            marginBottom: "6px",
-                            fontWeight: "500",
-                            color: "#374151",
-                            fontSize: "0.875rem"
-                        }}>
-                            Nama Lengkap
-                        </label>
-                        <input
-                            type="text"
-                            placeholder="Masukkan nama lengkap"
-                            required
-                            value={name}
-                            onChange={e => setName(e.target.value)}
-                            style={{
-                                width: "100%",
-                                padding: "12px 16px",
-                                borderRadius: "8px",
-                                border: "1px solid #d1d5db",
-                                fontSize: "0.95rem",
-                                boxSizing: "border-box"
-                            }}
-                        />
+                        <label className="form-label">Nama Lengkap</label>
+                        <div style={{ position: "relative" }}>
+                            <User size={18} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--gray-400)" }} />
+                            <input
+                                type="text"
+                                className="form-input"
+                                placeholder="Masukkan nama lengkap"
+                                required
+                                value={name}
+                                onChange={e => setName(e.target.value)}
+                                style={{ paddingLeft: "40px" }}
+                            />
+                        </div>
                     </div>
 
                     <div>
-                        <label style={{
-                            display: "block",
-                            marginBottom: "6px",
-                            fontWeight: "500",
-                            color: "#374151",
-                            fontSize: "0.875rem"
-                        }}>
-                            Email
-                        </label>
-                        <input
-                            type="email"
-                            placeholder="nama@email.com"
-                            required
-                            value={email}
-                            onChange={e => setEmail(e.target.value)}
-                            style={{
-                                width: "100%",
-                                padding: "12px 16px",
-                                borderRadius: "8px",
-                                border: "1px solid #d1d5db",
-                                fontSize: "0.95rem",
-                                boxSizing: "border-box"
-                            }}
-                        />
+                        <label className="form-label">Email</label>
+                        <div style={{ position: "relative" }}>
+                            <Mail size={18} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--gray-400)" }} />
+                            <input
+                                type="email"
+                                className="form-input"
+                                placeholder="nama@email.com"
+                                required
+                                value={email}
+                                onChange={e => setEmail(e.target.value)}
+                                style={{ paddingLeft: "40px" }}
+                            />
+                        </div>
                     </div>
 
                     <div>
-                        <label style={{
-                            display: "block",
-                            marginBottom: "6px",
-                            fontWeight: "500",
-                            color: "#374151",
-                            fontSize: "0.875rem"
-                        }}>
-                            Password
-                        </label>
-                        <input
-                            type="password"
-                            placeholder="Minimal 6 karakter"
-                            required
-                            value={password}
-                            onChange={e => setPassword(e.target.value)}
-                            style={{
-                                width: "100%",
-                                padding: "12px 16px",
-                                borderRadius: "8px",
-                                border: "1px solid #d1d5db",
-                                fontSize: "0.95rem",
-                                boxSizing: "border-box"
-                            }}
-                        />
-                    </div>
-
-                    <div>
-                        <label style={{
-                            display: "block",
-                            marginBottom: "6px",
-                            fontWeight: "500",
-                            color: "#374151",
-                            fontSize: "0.875rem"
-                        }}>
-                            Daftar Sebagai
-                        </label>
-                        <select
-                            value={role}
-                            onChange={e => setRole(e.target.value)}
-                            style={{
-                                width: "100%",
-                                padding: "12px 16px",
-                                borderRadius: "8px",
-                                border: "1px solid #d1d5db",
-                                fontSize: "0.95rem",
-                                backgroundColor: "white",
-                                cursor: "pointer",
-                                boxSizing: "border-box"
-                            }}
-                        >
-                            <option value="user">👤 Pengguna (Siswa)</option>
-                            <option value="organizer">🏢 Organizer (Pembuat Event)</option>
-                        </select>
+                        <label className="form-label">Password</label>
+                        <div style={{ position: "relative" }}>
+                            <Lock size={18} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--gray-400)" }} />
+                            <input
+                                type="password"
+                                className="form-input"
+                                placeholder="Minimal 6 karakter"
+                                required
+                                value={password}
+                                onChange={e => setPassword(e.target.value)}
+                                style={{ paddingLeft: "40px" }}
+                            />
+                        </div>
                     </div>
 
                     <button
                         type="submit"
                         disabled={loading}
+                        className="btn btn-full"
                         style={{
-                            width: "100%",
-                            padding: "14px",
-                            background: loading
-                                ? "#94a3b8"
-                                : "linear-gradient(135deg, #22c55e, #16a34a)",
+                            padding: "12px",
+                            background: loading ? "var(--gray-400)" : "linear-gradient(135deg, var(--success-500), #059669)",
                             color: "white",
-                            border: "none",
-                            borderRadius: "8px",
-                            cursor: loading ? "not-allowed" : "pointer",
-                            fontWeight: "600",
-                            fontSize: "1rem",
-                            marginTop: "8px"
+                            boxShadow: "0 4px 6px -1px rgba(16, 185, 129, 0.2)"
                         }}
                     >
-                        {loading ? "Memproses..." : "Daftar Sekarang"}
+                        {loading ? (
+                            <>
+                                <Loader2 className="animate-spin" size={20} /> Memproses...
+                            </>
+                        ) : (
+                            <>
+                                Daftar Sekarang <ArrowRight size={20} />
+                            </>
+                        )}
                     </button>
                 </form>
 
                 {/* Footer */}
-                <p style={{
-                    textAlign: "center",
-                    marginTop: "24px",
-                    fontSize: "0.9rem",
-                    color: "#64748b"
-                }}>
-                    Sudah punya akun?{" "}
-                    <Link to="/login" style={{
-                        color: "#3b82f6",
-                        fontWeight: "600",
-                        textDecoration: "none"
-                    }}>
-                        Login disini
-                    </Link>
-                </p>
+                <div style={{ marginTop: "32px", textAlign: "center" }}>
+                    <p style={{ fontSize: "0.9rem", color: "var(--gray-500)" }}>
+                        Sudah punya akun?{" "}
+                        <Link to="/login" style={{ color: "var(--primary-600)", fontWeight: "600" }}>
+                            Login disini
+                        </Link>
+                    </p>
+                </div>
             </div>
         </div>
     );

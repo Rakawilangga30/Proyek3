@@ -67,8 +67,8 @@ func UploadSessionVideo(c *gin.Context) {
 	config.DB.Get(&maxOrder, "SELECT COALESCE(MAX(order_index), 0) FROM session_videos WHERE session_id = ?", sessionID)
 
 	_, err = config.DB.Exec(`
-		INSERT INTO session_videos (session_id, title, description, video_url, size_bytes, order_index, created_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?)
+		INSERT INTO session_videos (session_id, title, description, video_url, size_bytes, duration, order_index, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, 0, ?, ?, NOW())
 	`, sessionID, finalTitle, descriptionInput, filePath, header.Size, maxOrder+1, time.Now())
 
 	if err != nil {
@@ -133,8 +133,8 @@ func UploadSessionFile(c *gin.Context) {
 	config.DB.Get(&maxOrder, `SELECT COALESCE(MAX(order_index), 0) FROM session_files WHERE session_id = ?`, sessionID)
 
 	_, err = config.DB.Exec(`
-		INSERT INTO session_files (session_id, title, description, file_url, size_bytes, order_index, created_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?)
+		INSERT INTO session_files (session_id, title, description, file_url, size_bytes, order_index, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
 	`, sessionID, finalTitle, descriptionInput, path, file.Size, maxOrder+1, time.Now())
 
 	if err != nil {

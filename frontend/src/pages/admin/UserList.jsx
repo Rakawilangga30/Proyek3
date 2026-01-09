@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../../api";
+import Modal from "../../components/Modal";
 
 export default function UserList() {
     const [users, setUsers] = useState([]);
@@ -353,78 +354,53 @@ export default function UserList() {
             </div>
 
             {/* Create User Modal */}
-            {showCreate && (
-                <div style={{
-                    position: "fixed",
-                    top: 0, left: 0, right: 0, bottom: 0,
-                    background: "rgba(0,0,0,0.5)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    zIndex: 1000,
-                    padding: "20px"
-                }}>
-                    <div style={{
-                        background: "white",
-                        borderRadius: "16px",
-                        padding: "24px",
-                        width: "100%",
-                        maxWidth: "450px",
-                        maxHeight: "90vh",
-                        overflowY: "auto"
-                    }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
-                            <h3 style={{ margin: 0, color: "#1e293b" }}>➕ Buat Akun Baru</h3>
-                            <button onClick={() => setShowCreate(false)} style={{ background: "none", border: "none", fontSize: "1.5rem", cursor: "pointer", color: "#64748b" }}>×</button>
-                        </div>
-                        <form onSubmit={handleCreateUser} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                            <div>
-                                <label style={labelStyle}>Nama Lengkap</label>
-                                <input type="text" required value={newUser.name} onChange={e => setNewUser({ ...newUser, name: e.target.value })} style={inputStyle} placeholder="Nama pengguna" />
-                            </div>
-                            <div>
-                                <label style={labelStyle}>Email</label>
-                                <input type="email" required value={newUser.email} onChange={e => setNewUser({ ...newUser, email: e.target.value })} style={inputStyle} placeholder="email@example.com" />
-                            </div>
-                            <div>
-                                <label style={labelStyle}>Password</label>
-                                <input type="password" required value={newUser.password} onChange={e => setNewUser({ ...newUser, password: e.target.value })} style={inputStyle} placeholder="Min. 6 karakter" />
-                            </div>
-                            <div>
-                                <label style={labelStyle}>Role</label>
-                                <select value={newUser.role} onChange={e => setNewUser({ ...newUser, role: e.target.value })} style={inputStyle}>
-                                    <option value="USER">👤 User Biasa</option>
-                                    <option value="ORGANIZATION">🏢 Organisasi</option>
-                                    <option value="ADMIN">🛡️ Admin</option>
-                                </select>
-                            </div>
-                            {newUser.role === "ADMIN" && (
-                                <div>
-                                    <label style={labelStyle}>Level Admin</label>
-                                    <select value={newUser.admin_level} onChange={e => setNewUser({ ...newUser, admin_level: parseInt(e.target.value) })} style={inputStyle}>
-                                        <option value={2}>🛡️ Admin Biasa</option>
-                                        <option value={1}>👑 Super Admin</option>
-                                    </select>
-                                </div>
-                            )}
-                            {newUser.role === "ORGANIZATION" && (
-                                <div>
-                                    <label style={labelStyle}>Nama Organisasi (Opsional)</label>
-                                    <input type="text" value={newUser.org_name} onChange={e => setNewUser({ ...newUser, org_name: e.target.value })} style={inputStyle} placeholder="Kosongkan jika user akan isi sendiri" />
-                                </div>
-                            )}
-                            <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end", marginTop: "8px" }}>
-                                <button type="button" onClick={() => setShowCreate(false)} style={{ padding: "10px 20px", background: "white", border: "1px solid #e2e8f0", borderRadius: "8px", cursor: "pointer", fontWeight: "500" }}>
-                                    Batal
-                                </button>
-                                <button type="submit" style={{ padding: "10px 20px", background: "linear-gradient(135deg, #22c55e, #16a34a)", color: "white", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "600" }}>
-                                    💾 Simpan
-                                </button>
-                            </div>
-                        </form>
+            <Modal isOpen={showCreate} onClose={() => setShowCreate(false)} title="➕ Buat Akun Baru" size="md">
+                <form onSubmit={handleCreateUser} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                    <div>
+                        <label style={labelStyle}>Nama Lengkap</label>
+                        <input type="text" required value={newUser.name} onChange={e => setNewUser({ ...newUser, name: e.target.value })} style={inputStyle} placeholder="Nama pengguna" />
                     </div>
-                </div>
-            )}
+                    <div>
+                        <label style={labelStyle}>Email</label>
+                        <input type="email" required value={newUser.email} onChange={e => setNewUser({ ...newUser, email: e.target.value })} style={inputStyle} placeholder="email@example.com" />
+                    </div>
+                    <div>
+                        <label style={labelStyle}>Password</label>
+                        <input type="password" required value={newUser.password} onChange={e => setNewUser({ ...newUser, password: e.target.value })} style={inputStyle} placeholder="Min. 6 karakter" />
+                    </div>
+                    <div>
+                        <label style={labelStyle}>Role</label>
+                        <select value={newUser.role} onChange={e => setNewUser({ ...newUser, role: e.target.value })} style={inputStyle}>
+                            <option value="USER">👤 User Biasa</option>
+                            <option value="ORGANIZATION">🏢 Organisasi</option>
+                            <option value="ADMIN">🛡️ Admin</option>
+                        </select>
+                    </div>
+                    {newUser.role === "ADMIN" && (
+                        <div>
+                            <label style={labelStyle}>Level Admin</label>
+                            <select value={newUser.admin_level} onChange={e => setNewUser({ ...newUser, admin_level: parseInt(e.target.value) })} style={inputStyle}>
+                                <option value={2}>🛡️ Admin Biasa</option>
+                                <option value={1}>👑 Super Admin</option>
+                            </select>
+                        </div>
+                    )}
+                    {newUser.role === "ORGANIZATION" && (
+                        <div>
+                            <label style={labelStyle}>Nama Organisasi (Opsional)</label>
+                            <input type="text" value={newUser.org_name} onChange={e => setNewUser({ ...newUser, org_name: e.target.value })} style={inputStyle} placeholder="Kosongkan jika user akan isi sendiri" />
+                        </div>
+                    )}
+                    <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end", marginTop: "8px" }}>
+                        <button type="button" onClick={() => setShowCreate(false)} className="btn btn-secondary">
+                            Batal
+                        </button>
+                        <button type="submit" className="btn btn-primary">
+                            💾 Simpan
+                        </button>
+                    </div>
+                </form>
+            </Modal>
         </div>
     );
 }

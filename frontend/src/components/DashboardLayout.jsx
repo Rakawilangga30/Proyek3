@@ -14,7 +14,9 @@ export default function DashboardLayout() {
     <div style={{
       display: "flex",
       minHeight: "100vh",
-      background: "#f8fafc"
+      background: "#f1f5f9", // Slate 100
+      width: "100%",
+      position: "relative"
     }}>
       {/* Sidebar */}
       <Sidebar />
@@ -22,8 +24,11 @@ export default function DashboardLayout() {
       {/* Main Content */}
       <div style={{
         flex: 1,
-        marginLeft: "260px",
-        minHeight: "100vh"
+        marginLeft: "280px", // Match new sidebar width
+        minHeight: "100vh",
+        display: "flex",
+        flexDirection: "column",
+        width: "calc(100% - 280px)"
       }}>
         {/* Top Bar with Notification */}
         <div style={{
@@ -31,17 +36,24 @@ export default function DashboardLayout() {
           display: "flex",
           justifyContent: "flex-end",
           alignItems: "center",
-          borderBottom: "1px solid #e2e8f0",
-          background: "white"
+          background: "rgba(255, 255, 255, 0.8)",
+          backdropFilter: "blur(12px)",
+          borderBottom: "1px solid rgba(226, 232, 240, 0.6)",
+          position: "sticky",
+          top: 0,
+          zIndex: 40,
+          boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.05)"
         }}>
           <NotificationBell />
         </div>
 
         {/* Content Area */}
         <div style={{
-          padding: "24px 32px",
-          maxWidth: "1200px",
-          margin: "0 auto"
+          padding: "32px 40px",
+          maxWidth: "1400px",
+          margin: "0 auto",
+          width: "100%",
+          flex: 1
         }}>
           <Outlet />
         </div>
