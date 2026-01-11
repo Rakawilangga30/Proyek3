@@ -177,18 +177,6 @@ export default function Sidebar() {
         <MenuItem to="/dashboard/cart" label="Keranjang" icon={Package} />
         <MenuItem to="/dashboard/notifications" label="Notifikasi" icon={Bell} />
 
-        {/* Jadi Creator */}
-        {!roles.includes("ORGANIZER") && !roles.includes("AFFILIATE") && !roles.includes("ADMIN") && (
-          <div style={{ margin: "16px", padding: "1px", background: "linear-gradient(90deg, #f59e0b, #ef4444)", borderRadius: "13px" }}>
-            <Link to="/dashboard/become-creator" style={{ textDecoration: "none", display: "block", background: "#1e293b", borderRadius: "12px", overflow: "hidden" }}>
-              <div style={{ padding: "12px 16px", display: "flex", alignItems: "center", gap: "12px", color: "white" }}>
-                <Rocket size={20} color="#f59e0b" />
-                <span style={{ fontWeight: "600" }}>Jadi Creator</span>
-              </div>
-            </Link>
-          </div>
-        )}
-
 
         {/* AFFILIATE Menu */}
         {roles.includes("AFFILIATE") && (

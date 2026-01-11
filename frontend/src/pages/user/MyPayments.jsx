@@ -54,7 +54,7 @@ export default function MyPayments() {
                     fetchPayments();
                 },
                 onError: (result) => {
-                    alert("Pembayaran gagal - gunakan tombol Simulasi untuk testing");
+                    alert("Pembayaran gagal");
                 },
                 onClose: async () => {
                     // Check if payment was completed even though popup was closed
@@ -76,22 +76,7 @@ export default function MyPayments() {
         }
     };
 
-    // Simulate payment for localhost testing (bypasses Midtrans)
-    const handleSimulatePayment = async (orderId) => {
-        if (!orderId) {
-            alert("Order ID tidak tersedia");
-            return;
-        }
-        try {
-            const res = await api.post('/user/payment/simulate-success', { order_id: orderId });
-            if (res.data.status === 'PAID') {
-                alert("✅ Pembayaran disimulasikan berhasil!");
-                fetchPayments();
-            }
-        } catch (err) {
-            alert(err.response?.data?.error || 'Gagal simulasi pembayaran');
-        }
-    };
+
 
     const formatPrice = (amount) => {
         return new Intl.NumberFormat('id-ID', {
@@ -251,40 +236,23 @@ export default function MyPayments() {
                                 </div>
 
                                 {/* Continue Payment Button for PENDING payments */}
-                                {payment.status === "PENDING" && payment.snap_token && (
-                                    <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                                        <button
-                                            onClick={() => handleContinuePayment(payment.snap_token, payment.order_id)}
-                                            style={{
-                                                padding: "8px 16px",
-                                                background: "linear-gradient(135deg, #f59e0b, #d97706)",
-                                                color: "white",
-                                                border: "none",
-                                                borderRadius: "6px",
-                                                cursor: "pointer",
-                                                fontWeight: "600",
-                                                fontSize: "0.85rem"
-                                            }}
-                                        >
-                                            💳 Lanjutkan Bayar
-                                        </button>
-                                        <button
-                                            onClick={() => handleSimulatePayment(payment.order_id)}
-                                            style={{
-                                                padding: "8px 16px",
-                                                background: "linear-gradient(135deg, #8b5cf6, #7c3aed)",
-                                                color: "white",
-                                                border: "none",
-                                                borderRadius: "6px",
-                                                cursor: "pointer",
-                                                fontWeight: "600",
-                                                fontSize: "0.85rem"
-                                            }}
-                                        >
-                                            🧪 Simulasi
-                                        </button>
-                                    </div>
-                                )}
+                                <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                                    <button
+                                        onClick={() => handleContinuePayment(payment.snap_token, payment.order_id)}
+                                        style={{
+                                            padding: "8px 16px",
+                                            background: "linear-gradient(135deg, #f59e0b, #d97706)",
+                                            color: "white",
+                                            border: "none",
+                                            borderRadius: "6px",
+                                            cursor: "pointer",
+                                            fontWeight: "600",
+                                            fontSize: "0.85rem"
+                                        }}
+                                    >
+                                        💳 Lanjutkan Bayar
+                                    </button>
+                                </div>
 
                                 {/* View Course Button for PAID payments */}
                                 {payment.status === "PAID" && payment.event_id && (
