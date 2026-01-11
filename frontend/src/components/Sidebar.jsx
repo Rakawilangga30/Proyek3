@@ -3,7 +3,8 @@ import {
   Home, User, BookOpen, Award, CreditCard, Bell,
   Rocket, BarChart2, PlusCircle, Package, DollarSign,
   LayoutDashboard, Building, FileText, CheckSquare,
-  Users, Star, Megaphone, LogOut
+  Users, Star, Megaphone, LogOut, Handshake, Wallet,
+  UserCheck
 } from "lucide-react";
 
 export default function Sidebar() {
@@ -173,6 +174,7 @@ export default function Sidebar() {
         <MenuItem to="/dashboard/my-courses" label="Kursus Saya" icon={BookOpen} />
         <MenuItem to="/dashboard/certificates" label="Sertifikat" icon={Award} />
         <MenuItem to="/dashboard/payments" label="Pembayaran" icon={CreditCard} />
+        <MenuItem to="/dashboard/cart" label="Keranjang" icon={Package} />
         <MenuItem to="/dashboard/notifications" label="Notifikasi" icon={Bell} />
 
         {/* Jadi Creator */}
@@ -187,13 +189,13 @@ export default function Sidebar() {
           </div>
         )}
 
+
         {/* AFFILIATE Menu */}
         {roles.includes("AFFILIATE") && (
           <>
             <SectionTitle>Affiliate Area</SectionTitle>
             <MenuItem to="/dashboard/affiliate" label="Dashboard" icon={BarChart2} />
-            <MenuItem to="/dashboard/affiliate/submit" label="Ajukan Event" icon={PlusCircle} />
-            <MenuItem to="/dashboard/affiliate/events" label="Event Saya" icon={Package} />
+            <MenuItem to="/dashboard/affiliate/partnerships" label="Kode Promo Saya" icon={Handshake} />
             <MenuItem to="/dashboard/affiliate/withdraw" label="Tarik Dana" icon={DollarSign} />
           </>
         )}
@@ -204,6 +206,8 @@ export default function Sidebar() {
             <SectionTitle>Creator Area</SectionTitle>
             <MenuItem to="/dashboard/org" label="Dashboard Org" icon={Building} />
             <MenuItem to="/dashboard/org/events" label="Manajemen Event" icon={FileText} />
+            <MenuItem to="/dashboard/org/affiliate-requests" label="Kelola Affiliate" icon={UserCheck} />
+            <MenuItem to="/dashboard/org/affiliate-stats" label="Statistik Affiliate" icon={BarChart2} />
             <MenuItem to="/dashboard/org/withdraw" label="Tarik Dana" icon={DollarSign} />
           </>
         )}
@@ -215,7 +219,7 @@ export default function Sidebar() {
             <MenuItem to="/dashboard/admin/official-org" label="Official Org" icon={Building} />
             <MenuItem to="/dashboard/admin/organizations" label="Kelola Organisasi" icon={Building} />
             <MenuItem to="/dashboard/admin/approvals" label="Persetujuan Org" icon={CheckSquare} />
-            <MenuItem to="/dashboard/admin/affiliates" label="Pengajuan Affiliate" icon={Users} />
+            <MenuItem to="/dashboard/admin/withdrawals" label="Kelola Penarikan" icon={Wallet} />
             <MenuItem to="/dashboard/admin/users" label="Kelola User" icon={Users} />
             <MenuItem to="/dashboard/admin/featured" label="Featured Banner" icon={Star} />
             <MenuItem to="/dashboard/admin/reports" label="Kelola Laporan" icon={Megaphone} />

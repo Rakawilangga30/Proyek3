@@ -23,12 +23,14 @@ import MyCertificates from "./pages/user/MyCertificates";
 import MyPayments from "./pages/user/MyPayments";
 import BecomeCreator from "./pages/user/BecomeCreator";
 import Notifications from "./pages/user/Notifications";
+import MyCart from "./pages/user/MyCart";
 
 // PROTECTED PAGES - Affiliate
 import AffiliateDashboard from "./pages/affiliate/AffiliateDashboard";
 import AffiliateEvents from "./pages/affiliate/AffiliateEvents";
 import AffiliateSubmitEvent from "./pages/affiliate/AffiliateSubmitEvent";
 import AffiliateWithdrawal from "./pages/affiliate/AffiliateWithdrawal";
+import AffiliatePartnerships from "./pages/affiliate/AffiliatePartnerships";
 
 // PROTECTED PAGES - Organization
 import MyOrganization from "./pages/org/MyOrganization";
@@ -37,6 +39,9 @@ import CreateEvent from "./pages/org/CreateEvent";
 import OrgEventList from "./pages/org/OrgEventList";
 import EventBuyers from "./pages/org/EventBuyers";
 import OrgWithdrawal from "./pages/org/OrgWithdrawal";
+import OrgAffiliateRequests from "./pages/org/OrgAffiliateRequests";
+import OrgAffiliateStats from "./pages/org/OrgAffiliateStats";
+import OrgWithdraw from "./pages/org/OrgWithdraw";
 
 // PROTECTED PAGES - Admin
 import UserList from "./pages/admin/UserList";
@@ -52,6 +57,8 @@ import AdminOfficialOrg from "./pages/admin/AdminOfficialOrg";
 import AdminOfficialOrgEventDetail from "./pages/admin/AdminOfficialOrgEventDetail";
 import AdminReports from "./pages/admin/AdminReports";
 import AdminFeaturedEvents from "./pages/admin/AdminFeaturedEvents";
+import AdminAds from "./pages/admin/AdminAds";
+import AdminWithdrawals from "./pages/admin/AdminWithdrawals";
 
 function App() {
   return (
@@ -78,12 +85,14 @@ function App() {
           <Route path="payments" element={<MyPayments />} />
           <Route path="become-creator" element={<BecomeCreator />} />
           <Route path="notifications" element={<Notifications />} />
+          <Route path="cart" element={<MyCart />} />
 
           {/* Affiliate Routes */}
           <Route path="affiliate" element={<AffiliateDashboard />} />
           <Route path="affiliate/events" element={<AffiliateEvents />} />
           <Route path="affiliate/submit" element={<AffiliateSubmitEvent />} />
           <Route path="affiliate/withdraw" element={<AffiliateWithdrawal />} />
+          <Route path="affiliate/partnerships" element={<AffiliatePartnerships />} />
 
           {/* Organization Routes */}
           <Route path="org" element={<MyOrganization />} />
@@ -92,7 +101,9 @@ function App() {
           <Route path="org/report/event/:eventId/buyers" element={<EventBuyers />} />
           <Route path="org/create-event" element={<CreateEvent />} />
           <Route path="org/event/:eventID/manage" element={<ManageEvent />} />
-          <Route path="org/withdraw" element={<OrgWithdrawal />} />
+          <Route path="org/withdraw" element={<OrgWithdraw />} />
+          <Route path="org/affiliate-requests" element={<OrgAffiliateRequests />} />
+          <Route path="org/affiliate-stats" element={<OrgAffiliateStats />} />
 
           {/* Admin Routes */}
           <Route path="admin/users" element={<UserList />} />
@@ -108,6 +119,8 @@ function App() {
           <Route path="admin/official-org/events/:eventId" element={<AdminOfficialOrgEventDetail />} />
           <Route path="admin/reports" element={<AdminReports />} />
           <Route path="admin/featured" element={<AdminFeaturedEvents />} />
+          <Route path="admin/ads" element={<AdminAds />} />
+          <Route path="admin/withdrawals" element={<AdminWithdrawals />} />
         </Route>
 
         {/* 404 */}

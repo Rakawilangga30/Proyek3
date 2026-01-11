@@ -33,10 +33,13 @@ export default function EventDetail() {
     const [quizSessionId, setQuizSessionId] = useState(null);
     const [showCertificate, setShowCertificate] = useState(false);
     const [quizProgress, setQuizProgress] = useState(null);
+    const [joiningAffiliate, setJoiningAffiliate] = useState(false);
+    const [affiliateStatus, setAffiliateStatus] = useState(null); // null = not checked, 'PENDING', 'APPROVED', 'REJECTED', 'none'
 
     useEffect(() => {
         fetchEventDetail();
         fetchQuizProgress();
+        checkAffiliateStatus();
     }, [id]);
 
     const fetchEventDetail = async () => {
@@ -82,6 +85,26 @@ export default function EventDetail() {
         }
     };
 
+    const checkAffiliateStatus = async () => {
+        const token = localStorage.getItem("token");
+        if (!token) {
+            setAffiliateStatus('none');
+            return;
+        }
+        try {
+            const res = await api.get('/affiliate/partnerships');
+            const partnerships = res.data || [];
+            const existing = partnerships.find(p => p.event_id == id);
+            if (existing) {
+                setAffiliateStatus(existing.status);
+            } else {
+                setAffiliateStatus('none');
+            }
+        } catch (err) {
+            setAffiliateStatus('none');
+        }
+    };
+
     const getSessionQuiz = (sessionId) => {
         if (!quizProgress?.progress) return null;
         return quizProgress.progress.find(p => p.session_id === sessionId);
@@ -113,6 +136,59 @@ export default function EventDetail() {
             fetchEventDetail();
         } catch (error) {
             toast.error("Gagal membeli: " + (error.response?.data?.error || "Terjadi kesalahan"));
+        }
+    };
+
+    const handleAddToCart = async (sessionId) => {
+        const token = localStorage.getItem("token");
+        if (!token) {
+            toast.error("Silakan login terlebih dahulu");
+            navigate("/login");
+            return;
+        }
+        try {
+            await api.post('/user/cart/add', { session_id: sessionId });
+            toast.success("Ditambahkan ke keranjang!");
+        } catch (error) {
+            toast.error(error.response?.data?.error || "Gagal menambahkan ke keranjang");
+        }
+    };
+
+    // Affiliate form modal
+    const [showAffiliateForm, setShowAffiliateForm] = useState(false);
+    const [affiliateForm, setAffiliateForm] = useState({
+        bank_name: '',
+        bank_account: '',
+        bank_account_name: '',
+        social_media: ''
+    });
+
+    const handleOpenAffiliateForm = () => {
+        const token = localStorage.getItem("token");
+        if (!token) {
+            toast.error("Silakan login terlebih dahulu");
+            navigate("/login");
+            return;
+        }
+        setShowAffiliateForm(true);
+    };
+
+    const handleSubmitAffiliate = async (e) => {
+        e.preventDefault();
+        if (!affiliateForm.bank_name || !affiliateForm.bank_account || !affiliateForm.bank_account_name || !affiliateForm.social_media) {
+            toast.error("Lengkapi semua data");
+            return;
+        }
+        setJoiningAffiliate(true);
+        try {
+            await api.post(`/affiliate/join/${id}`, affiliateForm);
+            toast.success("Permintaan affiliate terkirim! Menunggu persetujuan organisasi.");
+            setShowAffiliateForm(false);
+            setAffiliateForm({ bank_name: '', bank_account: '', bank_account_name: '', social_media: '' });
+        } catch (error) {
+            toast.error(error.response?.data?.error || "Gagal join affiliate");
+        } finally {
+            setJoiningAffiliate(false);
         }
     };
 
@@ -348,6 +424,48 @@ export default function EventDetail() {
                                 {organization.name}
                             </span>
                         </Link>
+                    )}
+
+                    {/* Join Affiliate Button */}
+                    {localStorage.getItem("token") && organization && !organization.is_official && affiliateStatus === 'none' && (
+                        <button
+                            onClick={handleOpenAffiliateForm}
+                            disabled={joiningAffiliate}
+                            style={{
+                                marginTop: "16px",
+                                padding: "10px 20px",
+                                background: "linear-gradient(135deg, #8b5cf6, #6366f1)",
+                                border: "none",
+                                borderRadius: "10px",
+                                color: "white",
+                                fontWeight: "600",
+                                cursor: joiningAffiliate ? "not-allowed" : "pointer",
+                                opacity: joiningAffiliate ? 0.7 : 1,
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "8px"
+                            }}
+                        >
+                            🤝 {joiningAffiliate ? "Mengirim..." : "Gabung Affiliate"}
+                        </button>
+                    )}
+
+                    {/* Already Registered as Affiliate */}
+                    {localStorage.getItem("token") && affiliateStatus && affiliateStatus !== 'none' && (
+                        <div style={{
+                            marginTop: "16px",
+                            padding: "10px 16px",
+                            background: affiliateStatus === 'APPROVED' ? '#dcfce7' : affiliateStatus === 'PENDING' ? '#fef3c7' : '#fee2e2',
+                            border: `1px solid ${affiliateStatus === 'APPROVED' ? '#86efac' : affiliateStatus === 'PENDING' ? '#fcd34d' : '#fca5a5'}`,
+                            borderRadius: "10px",
+                            color: affiliateStatus === 'APPROVED' ? '#166534' : affiliateStatus === 'PENDING' ? '#92400e' : '#991b1b',
+                            fontWeight: "500",
+                            fontSize: "0.9rem"
+                        }}>
+                            {affiliateStatus === 'APPROVED' && '✅ Anda sudah terdaftar sebagai affiliate'}
+                            {affiliateStatus === 'PENDING' && '⏳ Permintaan affiliate Anda sedang diproses'}
+                            {affiliateStatus === 'REJECTED' && '❌ Permintaan affiliate Anda ditolak'}
+                        </div>
                     )}
                 </div>
             </div>
@@ -641,13 +759,32 @@ export default function EventDetail() {
                                             Gratis - Daftar
                                         </button>
                                     ) : (
-                                        <PurchaseButton
-                                            sessionId={s.id}
-                                            sessionName={s.title}
-                                            price={s.price}
-                                            onSuccess={() => fetchEventDetail()}
-                                            className="btn btn-primary btn-full"
-                                        />
+                                        <>
+                                            <PurchaseButton
+                                                sessionId={s.id}
+                                                sessionName={s.title}
+                                                price={s.price}
+                                                onSuccess={() => fetchEventDetail()}
+                                                className="btn btn-primary btn-full"
+                                            />
+                                            {/* Add to Cart button */}
+                                            <button
+                                                onClick={() => handleAddToCart(s.id)}
+                                                style={{
+                                                    marginTop: "8px",
+                                                    padding: "10px",
+                                                    background: "transparent",
+                                                    border: "1px solid #e2e8f0",
+                                                    borderRadius: "8px",
+                                                    color: "#64748b",
+                                                    cursor: "pointer",
+                                                    width: "100%",
+                                                    fontSize: "0.85rem"
+                                                }}
+                                            >
+                                                🛒 Tambah ke Keranjang
+                                            </button>
+                                        </>
                                     )
                                 )}
                             </div>
@@ -798,6 +935,100 @@ export default function EventDetail() {
                     title={activeDocument.title}
                     onClose={() => setActiveDocument(null)}
                 />
+            )}
+
+            {/* Affiliate Join Form Modal */}
+            {showAffiliateForm && (
+                <div style={{
+                    position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+                    background: "rgba(0,0,0,0.7)", display: "flex",
+                    alignItems: "center", justifyContent: "center", zIndex: 9999
+                }}>
+                    <div style={{
+                        background: "white", borderRadius: "16px", padding: "32px",
+                        width: "100%", maxWidth: "450px", color: "#1e293b"
+                    }}>
+                        <h3 style={{ margin: "0 0 8px 0", fontSize: "1.3rem" }}>🤝 Gabung Affiliate</h3>
+                        <p style={{ color: "#64748b", marginBottom: "20px" }}>
+                            Isi data berikut untuk bergabung sebagai affiliate
+                        </p>
+                        <form onSubmit={handleSubmitAffiliate}>
+                            <div style={{ marginBottom: "16px" }}>
+                                <label style={{ display: "block", marginBottom: "6px", fontWeight: "500" }}>Nama Bank *</label>
+                                <select
+                                    value={affiliateForm.bank_name}
+                                    onChange={(e) => setAffiliateForm({ ...affiliateForm, bank_name: e.target.value })}
+                                    style={{ width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid #e2e8f0" }}
+                                    required
+                                >
+                                    <option value="">Pilih Bank</option>
+                                    <option value="BCA">BCA</option>
+                                    <option value="BNI">BNI</option>
+                                    <option value="BRI">BRI</option>
+                                    <option value="Mandiri">Mandiri</option>
+                                    <option value="CIMB Niaga">CIMB Niaga</option>
+                                    <option value="DANA">DANA</option>
+                                    <option value="OVO">OVO</option>
+                                    <option value="GoPay">GoPay</option>
+                                    <option value="ShopeePay">ShopeePay</option>
+                                </select>
+                            </div>
+                            <div style={{ marginBottom: "16px" }}>
+                                <label style={{ display: "block", marginBottom: "6px", fontWeight: "500" }}>Nomor Rekening *</label>
+                                <input
+                                    type="text"
+                                    value={affiliateForm.bank_account}
+                                    onChange={(e) => setAffiliateForm({ ...affiliateForm, bank_account: e.target.value })}
+                                    placeholder="Contoh: 1234567890"
+                                    style={{ width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid #e2e8f0" }}
+                                    required
+                                />
+                            </div>
+                            <div style={{ marginBottom: "16px" }}>
+                                <label style={{ display: "block", marginBottom: "6px", fontWeight: "500" }}>Atas Nama *</label>
+                                <input
+                                    type="text"
+                                    value={affiliateForm.bank_account_name}
+                                    onChange={(e) => setAffiliateForm({ ...affiliateForm, bank_account_name: e.target.value })}
+                                    placeholder="Nama pemilik rekening"
+                                    style={{ width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid #e2e8f0" }}
+                                    required
+                                />
+                            </div>
+                            <div style={{ marginBottom: "24px" }}>
+                                <label style={{ display: "block", marginBottom: "6px", fontWeight: "500" }}>Media Sosial *</label>
+                                <input
+                                    type="text"
+                                    value={affiliateForm.social_media}
+                                    onChange={(e) => setAffiliateForm({ ...affiliateForm, social_media: e.target.value })}
+                                    placeholder="Instagram/TikTok/YouTube"
+                                    style={{ width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid #e2e8f0" }}
+                                    required
+                                />
+                            </div>
+                            <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end" }}>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowAffiliateForm(false)}
+                                    style={{ padding: "12px 24px", borderRadius: "8px", border: "1px solid #e2e8f0", background: "white", cursor: "pointer" }}
+                                >
+                                    Batal
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={joiningAffiliate}
+                                    style={{
+                                        padding: "12px 24px", borderRadius: "8px", border: "none",
+                                        background: "linear-gradient(135deg, #8b5cf6, #6366f1)",
+                                        color: "white", fontWeight: "600", cursor: "pointer"
+                                    }}
+                                >
+                                    {joiningAffiliate ? "Mengirim..." : "Kirim Permintaan"}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
             )}
         </div>
     );

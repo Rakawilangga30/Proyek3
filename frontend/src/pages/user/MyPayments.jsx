@@ -22,30 +22,74 @@ export default function MyPayments() {
         }
     };
 
-    const handleContinuePayment = (snapToken) => {
+    const handleContinuePayment = (snapToken, orderId) => {
         if (!snapToken) {
             alert("Token pembayaran tidak tersedia. Silakan beli ulang.");
             return;
         }
         if (window.snap) {
             window.snap.pay(snapToken, {
-                onSuccess: () => {
+                onSuccess: async () => {
+                    // Check status to update database (important for localhost)
+                    try {
+                        if (orderId) {
+                            await api.post('/user/payment/check-status', { order_id: orderId });
+                        }
+                    } catch (e) {
+                        console.log('Status check failed:', e);
+                    }
                     alert("Pembayaran berhasil!");
                     fetchPayments();
                 },
-                onPending: () => {
+                onPending: async () => {
+                    // Check status for pending payments
+                    try {
+                        if (orderId) {
+                            await api.post('/user/payment/check-status', { order_id: orderId });
+                        }
+                    } catch (e) {
+                        console.log('Status check failed:', e);
+                    }
                     alert("Pembayaran pending, silakan selesaikan pembayaran.");
                     fetchPayments();
                 },
                 onError: (result) => {
-                    alert("Pembayaran gagal: " + JSON.stringify(result));
+                    alert("Pembayaran gagal - gunakan tombol Simulasi untuk testing");
                 },
-                onClose: () => {
-                    // User closed without completing payment
+                onClose: async () => {
+                    // Check if payment was completed even though popup was closed
+                    try {
+                        if (orderId) {
+                            const statusRes = await api.post('/user/payment/check-status', { order_id: orderId });
+                            if (statusRes.data.status === 'PAID') {
+                                alert("Pembayaran berhasil!");
+                                fetchPayments();
+                            }
+                        }
+                    } catch (e) {
+                        console.log('Status check on close failed:', e);
+                    }
                 }
             });
         } else {
             alert("Payment gateway tidak tersedia. Pastikan Midtrans Snap sudah dimuat.");
+        }
+    };
+
+    // Simulate payment for localhost testing (bypasses Midtrans)
+    const handleSimulatePayment = async (orderId) => {
+        if (!orderId) {
+            alert("Order ID tidak tersedia");
+            return;
+        }
+        try {
+            const res = await api.post('/user/payment/simulate-success', { order_id: orderId });
+            if (res.data.status === 'PAID') {
+                alert("✅ Pembayaran disimulasikan berhasil!");
+                fetchPayments();
+            }
+        } catch (err) {
+            alert(err.response?.data?.error || 'Gagal simulasi pembayaran');
         }
     };
 
@@ -208,21 +252,38 @@ export default function MyPayments() {
 
                                 {/* Continue Payment Button for PENDING payments */}
                                 {payment.status === "PENDING" && payment.snap_token && (
-                                    <button
-                                        onClick={() => handleContinuePayment(payment.snap_token)}
-                                        style={{
-                                            padding: "8px 16px",
-                                            background: "linear-gradient(135deg, #f59e0b, #d97706)",
-                                            color: "white",
-                                            border: "none",
-                                            borderRadius: "6px",
-                                            cursor: "pointer",
-                                            fontWeight: "600",
-                                            fontSize: "0.85rem"
-                                        }}
-                                    >
-                                        💳 Lanjutkan Bayar
-                                    </button>
+                                    <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                                        <button
+                                            onClick={() => handleContinuePayment(payment.snap_token, payment.order_id)}
+                                            style={{
+                                                padding: "8px 16px",
+                                                background: "linear-gradient(135deg, #f59e0b, #d97706)",
+                                                color: "white",
+                                                border: "none",
+                                                borderRadius: "6px",
+                                                cursor: "pointer",
+                                                fontWeight: "600",
+                                                fontSize: "0.85rem"
+                                            }}
+                                        >
+                                            💳 Lanjutkan Bayar
+                                        </button>
+                                        <button
+                                            onClick={() => handleSimulatePayment(payment.order_id)}
+                                            style={{
+                                                padding: "8px 16px",
+                                                background: "linear-gradient(135deg, #8b5cf6, #7c3aed)",
+                                                color: "white",
+                                                border: "none",
+                                                borderRadius: "6px",
+                                                cursor: "pointer",
+                                                fontWeight: "600",
+                                                fontSize: "0.85rem"
+                                            }}
+                                        >
+                                            🧪 Simulasi
+                                        </button>
+                                    </div>
                                 )}
 
                                 {/* View Course Button for PAID payments */}

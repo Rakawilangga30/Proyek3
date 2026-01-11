@@ -222,8 +222,15 @@ func HandleMidtransNotification(c *gin.Context) {
 			return
 		}
 
-		// Process successful payment
-		err := processSuccessfulPayment(notification.OrderID, notification.GrossAmount)
+		// Route to appropriate handler based on order ID prefix
+		var err error
+		if strings.HasPrefix(notification.OrderID, "CART-") {
+			// Cart checkout order
+			err = ProcessCartPayment(notification.OrderID, notification.GrossAmount)
+		} else {
+			// Single session order (legacy)
+			err = processSuccessfulPayment(notification.OrderID, notification.GrossAmount)
+		}
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -469,12 +476,15 @@ func CheckPaymentStatus(c *gin.Context) {
 		return
 	}
 
-	// Check if purchase exists
+	fmt.Printf("[CHECK-STATUS] Checking order: %s\n", input.OrderID)
+
+	// Check if purchase exists (cart orders may have multiple purchases, get any one)
 	var purchase struct {
-		ID     int64  `db:"id"`
-		Status string `db:"status"`
+		ID              int64   `db:"id"`
+		Status          string  `db:"status"`
+		MidtransOrderID *string `db:"midtrans_order_id"`
 	}
-	err := config.DB.Get(&purchase, "SELECT id, status FROM purchases WHERE order_id = ?", input.OrderID)
+	err := config.DB.Get(&purchase, "SELECT id, status, midtrans_order_id FROM purchases WHERE order_id = ? LIMIT 1", input.OrderID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Order not found"})
 		return
@@ -493,11 +503,20 @@ func CheckPaymentStatus(c *gin.Context) {
 	// ----------------------------------------------
 	// FIX: Check status directly to Midtrans (Active Check)
 	// ----------------------------------------------
-	// This is important because on localhost, webhooks might not reach the server.
-	// We actively ask Midtrans: "What is the status of this order?"
+	// Use midtrans_order_id if available (for cart orders with affiliate code)
+	// Otherwise use the input order_id
+	midtransOrderID := input.OrderID
+	if purchase.MidtransOrderID != nil && *purchase.MidtransOrderID != "" {
+		midtransOrderID = *purchase.MidtransOrderID
+	}
 
-	transactionStatusResp, err := config.CoreClient.CheckTransaction(input.OrderID)
-	if err != nil {
+	fmt.Printf("[CHECK-STATUS] Checking Midtrans with order_id: %s\n", midtransOrderID)
+
+	transactionStatusResp, midtransErr := config.CoreClient.CheckTransaction(midtransOrderID)
+
+	// Handle Midtrans SDK error - check both error and response
+	if midtransErr != nil || transactionStatusResp == nil {
+		fmt.Printf("[CHECK-STATUS] Midtrans check failed or empty response: err=%v, resp=%v\n", midtransErr, transactionStatusResp)
 		// If check fails, just return current local status
 		c.JSON(http.StatusOK, gin.H{
 			"order_id":       input.OrderID,
@@ -507,23 +526,31 @@ func CheckPaymentStatus(c *gin.Context) {
 		return
 	}
 
-	if transactionStatusResp != nil {
-		status := transactionStatusResp.TransactionStatus
-		
-		// If Midtrans says it's paid (capture/settlement), UPDATE OUR DB!
-		if status == "capture" || status == "settlement" {
-			// Call the same function used by Webhook
-			err := processSuccessfulPayment(input.OrderID, transactionStatusResp.GrossAmount)
-			if err != nil {
-				fmt.Printf("Error updating paid status: %v\n", err)
-			} else {
-				purchase.Status = "PAID" // Update local var for response
-			}
-		} else if status == "deny" || status == "cancel" || status == "expire" {
-			// Mark as FAILED
-			config.DB.Exec("UPDATE purchases SET status = 'FAILED' WHERE order_id = ?", input.OrderID)
-			purchase.Status = "FAILED"
+	status := transactionStatusResp.TransactionStatus
+	fmt.Printf("[CHECK-STATUS] Midtrans status: %s\n", status)
+
+	// If Midtrans says it's paid (capture/settlement), UPDATE OUR DB!
+	if status == "capture" || status == "settlement" {
+		// Route to appropriate handler based on order ID prefix
+		// Use input.OrderID (base order) for our handlers since that's what's in the DB
+		var processErr error
+		if strings.HasPrefix(input.OrderID, "CART-") {
+			processErr = ProcessCartPayment(input.OrderID, transactionStatusResp.GrossAmount)
+		} else {
+			processErr = processSuccessfulPayment(input.OrderID, transactionStatusResp.GrossAmount)
 		}
+		if processErr != nil {
+			fmt.Printf("[CHECK-STATUS] Error updating paid status: %v\n", processErr)
+		} else {
+			purchase.Status = "PAID" // Update local var for response
+			fmt.Printf("[CHECK-STATUS] ✅ Updated status to PAID\n")
+		}
+	} else if status == "deny" || status == "cancel" || status == "expire" {
+		// Mark as FAILED
+		config.DB.Exec("UPDATE purchases SET status = 'FAILED' WHERE order_id = ?", input.OrderID)
+		purchase.Status = "FAILED"
+	} else if status == "pending" {
+		fmt.Printf("[CHECK-STATUS] Payment still pending\n")
 	}
 
 	c.JSON(http.StatusOK, gin.H{
@@ -545,13 +572,15 @@ func SimulatePaymentSuccess(c *gin.Context) {
 		return
 	}
 
+	fmt.Printf("[SIMULATE] Simulating payment for order: %s\n", input.OrderID)
+
 	// Check if purchase exists and is PENDING
 	var purchase struct {
 		ID        int64   `db:"id"`
 		Status    string  `db:"status"`
 		PricePaid float64 `db:"price_paid"`
 	}
-	err := config.DB.Get(&purchase, "SELECT id, status, price_paid FROM purchases WHERE order_id = ?", input.OrderID)
+	err := config.DB.Get(&purchase, "SELECT id, status, price_paid FROM purchases WHERE order_id = ? LIMIT 1", input.OrderID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Order not found"})
 		return
@@ -562,13 +591,31 @@ func SimulatePaymentSuccess(c *gin.Context) {
 		return
 	}
 
-	// Simulate successful payment
-	grossAmount := fmt.Sprintf("%.2f", purchase.PricePaid)
-	err = processSuccessfulPayment(input.OrderID, grossAmount)
+	// Get total amount for cart orders (may have multiple items)
+	var totalAmount float64
+	config.DB.Get(&totalAmount, "SELECT COALESCE(SUM(price_paid), 0) FROM purchases WHERE order_id = ?", input.OrderID)
+	if totalAmount == 0 {
+		totalAmount = purchase.PricePaid
+	}
+
+	// Simulate successful payment - route to correct handler based on order type
+	grossAmount := fmt.Sprintf("%.2f", totalAmount)
+
+	if strings.HasPrefix(input.OrderID, "CART-") {
+		// Cart order - use ProcessCartPayment
+		err = ProcessCartPayment(input.OrderID, grossAmount)
+	} else {
+		// Single session order
+		err = processSuccessfulPayment(input.OrderID, grossAmount)
+	}
+
 	if err != nil {
+		fmt.Printf("[SIMULATE] Error: %v\n", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process payment: " + err.Error()})
 		return
 	}
+
+	fmt.Printf("[SIMULATE] ✅ Payment simulated successfully for order: %s\n", input.OrderID)
 
 	c.JSON(http.StatusOK, gin.H{
 		"message":  "Pembayaran berhasil disimulasikan (SANDBOX ONLY)",

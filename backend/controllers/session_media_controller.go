@@ -67,12 +67,13 @@ func UploadSessionVideo(c *gin.Context) {
 	config.DB.Get(&maxOrder, "SELECT COALESCE(MAX(order_index), 0) FROM session_videos WHERE session_id = ?", sessionID)
 
 	_, err = config.DB.Exec(`
-		INSERT INTO session_videos (session_id, title, description, video_url, size_bytes, duration, order_index, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, 0, ?, ?, NOW())
-	`, sessionID, finalTitle, descriptionInput, filePath, header.Size, maxOrder+1, time.Now())
+		INSERT INTO session_videos (session_id, title, description, video_url, size_bytes, order_index, created_at)
+		VALUES (?, ?, ?, ?, ?, ?, NOW())
+	`, sessionID, finalTitle, descriptionInput, filePath, header.Size, maxOrder+1)
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save video metadata"})
+		fmt.Printf("[UPLOAD_VIDEO_ERROR] Failed to insert: %v\n", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save video metadata: " + err.Error()})
 		return
 	}
 
@@ -171,9 +172,9 @@ func UpdateSessionVideo(c *gin.Context) {
 		return
 	}
 
-	_, err := config.DB.Exec(`UPDATE session_videos SET title=?, description=? WHERE id=? AND session_id=?`, 
+	_, err := config.DB.Exec(`UPDATE session_videos SET title=?, description=? WHERE id=? AND session_id=?`,
 		input.Title, input.Description, mediaID, sessionID)
-	
+
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update video info"})
 		return
@@ -207,9 +208,9 @@ func UpdateSessionFile(c *gin.Context) {
 		return
 	}
 
-	_, err := config.DB.Exec(`UPDATE session_files SET title=?, description=? WHERE id=? AND session_id=?`, 
+	_, err := config.DB.Exec(`UPDATE session_files SET title=?, description=? WHERE id=? AND session_id=?`,
 		input.Title, input.Description, mediaID, sessionID)
-	
+
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update file info"})
 		return
@@ -304,13 +305,20 @@ func GetSessionMedia(c *gin.Context) {
 	sessionIDStr := c.Param("sessionID")
 	var sessionID int64
 	fmt.Sscan(sessionIDStr, &sessionID)
-	if !checkSessionOwnedByUser(sessionID, userID) { c.JSON(403, gin.H{"error": "Access Denied"}); return }
+	if !checkSessionOwnedByUser(sessionID, userID) {
+		c.JSON(403, gin.H{"error": "Access Denied"})
+		return
+	}
 	var videos []models.SessionVideo
 	config.DB.Select(&videos, `SELECT id, session_id, title, COALESCE(description, '') as description, video_url FROM session_videos WHERE session_id = ? ORDER BY order_index ASC`, sessionID)
-	if videos == nil { videos = []models.SessionVideo{} }
+	if videos == nil {
+		videos = []models.SessionVideo{}
+	}
 	var files []models.SessionFile
 	config.DB.Select(&files, `SELECT id, session_id, title, COALESCE(description, '') as description, file_url FROM session_files WHERE session_id = ? ORDER BY order_index ASC`, sessionID)
-	if files == nil { files = []models.SessionFile{} }
+	if files == nil {
+		files = []models.SessionFile{}
+	}
 	c.JSON(200, gin.H{"videos": videos, "files": files})
 }
 
@@ -321,15 +329,25 @@ func GetUserSessionMedia(c *gin.Context) {
 	fmt.Sscan(sessionIDStr, &sessionID)
 	var count int
 	config.DB.Get(&count, `SELECT COUNT(*) FROM purchases WHERE user_id = ? AND session_id = ?`, userID, sessionID)
-	if count == 0 { c.JSON(403, gin.H{"error": "Not Purchased"}); return }
+	if count == 0 {
+		c.JSON(403, gin.H{"error": "Not Purchased"})
+		return
+	}
 	var status string
 	config.DB.Get(&status, `SELECT publish_status FROM sessions WHERE id = ?`, sessionID)
-	if status != "PUBLISHED" { c.JSON(403, gin.H{"error": "Not Published"}); return }
+	if status != "PUBLISHED" {
+		c.JSON(403, gin.H{"error": "Not Published"})
+		return
+	}
 	var videos []models.SessionVideo
 	config.DB.Select(&videos, `SELECT id, session_id, title, COALESCE(description, '') as description, video_url FROM session_videos WHERE session_id = ? ORDER BY order_index ASC`, sessionID)
-	if videos == nil { videos = []models.SessionVideo{} }
+	if videos == nil {
+		videos = []models.SessionVideo{}
+	}
 	var files []models.SessionFile
 	config.DB.Select(&files, `SELECT id, session_id, title, COALESCE(description, '') as description, file_url FROM session_files WHERE session_id = ? ORDER BY order_index ASC`, sessionID)
-	if files == nil { files = []models.SessionFile{} }
+	if files == nil {
+		files = []models.SessionFile{}
+	}
 	c.JSON(200, gin.H{"session_id": sessionID, "videos": videos, "files": files})
 }

@@ -35,6 +35,9 @@ func RegisterRoutes(r *gin.Engine) {
 
 		// SANDBOX ONLY - Public endpoint for testing payment
 		api.POST("/sandbox/simulate-payment", controllers.SimulatePaymentSuccess)
+
+		// Public Ads
+		api.GET("/ads", controllers.GetPublicAds)
 	}
 
 	// ==========================================
@@ -80,6 +83,17 @@ func RegisterRoutes(r *gin.Engine) {
 
 		// Reports/Pengaduan
 		userGroup.POST("/reports", controllers.SubmitReport)
+
+		// Cart & Checkout
+		userGroup.GET("/cart", controllers.GetCart)
+		userGroup.POST("/cart/add", controllers.AddToCart)
+		userGroup.DELETE("/cart/items/:id", controllers.RemoveFromCart)
+		userGroup.POST("/cart/apply-code", controllers.ApplyAffiliateCode)
+		userGroup.DELETE("/cart", controllers.ClearCart)
+		userGroup.POST("/cart/checkout", controllers.CheckoutCart)
+
+		// Withdrawal Requests History
+		userGroup.GET("/withdrawal-requests", controllers.GetMyWithdrawalRequests)
 	}
 
 	// ==========================================
@@ -96,16 +110,17 @@ func RegisterRoutes(r *gin.Engine) {
 	)
 
 	// ==========================================
-	// 4. AFFILIATE ROUTES (Any logged-in user can submit)
-	// User gets AFFILIATE role when their first event is approved
+	// 4. AFFILIATE ROUTES (New Flow: User joins to promote org events)
 	// ==========================================
 	affiliate := api.Group("/affiliate")
 	affiliate.Use(middlewares.AuthRequired())
 	{
-		// Submit event - any user can do this
-		affiliate.POST("/submit-event", controllers.SubmitAffiliateEvent)
+		// NEW: Join as affiliate for an event
+		affiliate.POST("/join/:eventId", controllers.JoinAffiliateEvent)
+		affiliate.GET("/partnerships", controllers.GetMyPartnerships)
 
-		// Dashboard & events - only for users who have submitted (data filtered by user_id)
+		// LEGACY: Old submit event flow (keeping for backward compat)
+		affiliate.POST("/submit-event", controllers.SubmitAffiliateEvent)
 		affiliate.GET("/dashboard", controllers.GetAffiliateDashboard)
 		affiliate.GET("/events", controllers.GetAffiliateEvents)
 		affiliate.GET("/events/:id", controllers.GetAffiliateSubmissionDetail)
@@ -114,6 +129,7 @@ func RegisterRoutes(r *gin.Engine) {
 		affiliate.GET("/balance", controllers.GetAffiliateBalance)
 		affiliate.POST("/withdraw", controllers.SimulateWithdraw)
 		affiliate.GET("/withdrawals", controllers.GetWithdrawalHistory)
+		affiliate.POST("/withdrawal-request", controllers.RequestAffiliateWithdrawal)
 	}
 
 	// ==========================================
@@ -167,6 +183,13 @@ func RegisterRoutes(r *gin.Engine) {
 		org.GET("/balance", controllers.GetOrganizationBalance)
 		org.POST("/withdraw", controllers.SimulateOrgWithdraw)
 		org.GET("/withdrawals", controllers.GetOrgWithdrawalHistory)
+		org.POST("/withdrawal-request", controllers.RequestOrgWithdrawal)
+
+		// Affiliate Management (New Flow)
+		org.GET("/affiliate-requests", controllers.GetAffiliateRequests)
+		org.PUT("/affiliate-requests/:id/approve", controllers.ApproveAffiliateRequest)
+		org.PUT("/affiliate-requests/:id/reject", controllers.RejectAffiliateRequest)
+		org.GET("/affiliate-stats", controllers.GetOrgAffiliateStats)
 	}
 
 	// ==========================================
@@ -257,5 +280,16 @@ func RegisterRoutes(r *gin.Engine) {
 		admin.DELETE("/featured-events/:id", controllers.AdminRemoveFeaturedEvent)
 		admin.PUT("/featured-events/reorder", controllers.AdminReorderFeaturedEvents)
 		admin.PUT("/featured-events/:id/order", controllers.AdminUpdateFeaturedOrder)
+
+		// Ads Management
+		admin.GET("/ads", controllers.GetAllAds)
+		admin.POST("/ads", controllers.CreateAdBanner)
+		admin.PUT("/ads/:id", controllers.UpdateAdBanner)
+		admin.DELETE("/ads/:id", controllers.DeleteAdBanner)
+
+		// Withdrawal Requests Management
+		admin.GET("/withdrawal-requests", controllers.GetAllWithdrawalRequests)
+		admin.PUT("/withdrawal-requests/:id/approve", controllers.ApproveWithdrawalRequest)
+		admin.PUT("/withdrawal-requests/:id/reject", controllers.RejectWithdrawalRequest)
 	}
 }
